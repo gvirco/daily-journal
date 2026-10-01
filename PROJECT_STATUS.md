@@ -4,7 +4,7 @@ Last updated: 2026-10-01
 
 ## Current Phase
 
-Project Definition
+MVP Development
 
 
 ## Product
@@ -28,11 +28,13 @@ MVP 1.0
 - High-level Daily Journal concept agreed
 - MVP 1.0 scope defined
 - MVP acceptance criteria defined
+- Initial application shell implemented
+- Current date displayed dynamically
 
 
 ## In Progress
 
-- Project initialization
+- Daily date navigation
 
 
 ## Next Steps
@@ -48,24 +50,24 @@ MVP 1.0
 
 ## MVP Development Sequence
 
-1. Application shell
-2. Today's date
-3. Previous / Today / Next navigation
-4. DailyJournalEntry data model
-5. Local persistence service
-6. Morning Check-in
-7. Today's Big 3
-8. Energy tracking
-9. Work & Focus
-10. Training
-11. Food & Coffee
-12. Learning
-13. Personal Progress
-14. Evening Check-out
-15. Sleep Preparation
-16. JSON export/import
-17. CSV export
-18. Mobile usability pass
+- [x] Application shell - completed.
+- [x] Today's date - completed.
+- [ ] Previous / Today / Next navigation
+- [ ] DailyJournalEntry data model
+- [ ] Local persistence service
+- [ ] Morning Check-in
+- [ ] Today's Big 3
+- [ ] Energy tracking
+- [ ] Work & Focus
+- [ ] Training
+- [ ] Food & Coffee
+- [ ] Learning
+- [ ] Personal Progress
+- [ ] Evening Check-out
+- [ ] Sleep Preparation
+- [ ] JSON export/import
+- [ ] CSV export
+- [ ] Mobile usability pass
 
 
 ## Later
