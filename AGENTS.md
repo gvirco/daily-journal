@@ -13,6 +13,7 @@ Keep solutions simple, understandable, and appropriate for a small MVP.
 
 Use the following documents when relevant:
 
+- `DESIGN_SYSTEM.md` — visual language, design tokens, layout, interaction patterns, and UI conventions.
 - `PRODUCT_SPEC.md` — product requirements, MVP scope, and acceptance criteria.
 - `PROJECT_STATUS.md` — current development phase and planned next steps.
 - `README.md` — project overview and developer usage instructions.
@@ -78,6 +79,9 @@ Do not implement future roadmap features unless explicitly requested.
 - Avoid introducing new dependencies without a clear need.
 - Follow the existing project structure and naming conventions.
 - Preserve readability over cleverness.
+- Follow `DESIGN_SYSTEM.md` for all visual implementation.
+- Reuse existing design tokens instead of introducing arbitrary colours, spacing, radii, or typography values.
+- Prefer restrained, data-first UI over decorative styling.
 
 ## Verification
 

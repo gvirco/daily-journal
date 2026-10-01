@@ -12,9 +12,10 @@ function App() {
   return (
     <main className="journal-shell">
       <header className="journal-header">
-        <p className="eyebrow">Your daily performance journal</p>
-        <h1>Daily Journal</h1>
-        <time dateTime={today.toISOString().slice(0, 10)}>{formattedDate}</time>
+        <h1 className="journal-title">Daily Journal</h1>
+        <time className="journal-date" dateTime={today.toISOString().slice(0, 10)}>
+          {formattedDate}
+        </time>
       </header>
     </main>
   )
