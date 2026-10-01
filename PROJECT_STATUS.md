@@ -30,11 +30,15 @@ MVP 1.0
 - MVP acceptance criteria defined
 - Initial application shell implemented
 - Current date displayed dynamically
+- Design direction defined
+- DESIGN_SYSTEM.md created
+- Dark-mode design foundation implemented
+- Reusable CSS design tokens established
 
 
 ## In Progress
 
-- Daily date navigation
+- Date navigation: Previous / Today / Next
 
 
 ## Next Steps
@@ -52,6 +56,7 @@ MVP 1.0
 
 - [x] Application shell - completed.
 - [x] Today's date - completed.
+- [x] Design foundation - completed.
 - [ ] Previous / Today / Next navigation
 - [ ] DailyJournalEntry data model
 - [ ] Local persistence service

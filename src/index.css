@@ -1,8 +1,75 @@
 :root {
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+  /* Surfaces */
+  --color-bg: #0d1117;
+  --color-surface: #151b23;
+  --color-surface-elevated: #1b222c;
+  --color-surface-hover: #202833;
+
+  /* Borders */
+  --color-border: #2a3441;
+  --color-border-subtle: #222b35;
+  --border-width: 1px;
+
+  /* Text */
+  --color-text: #f0f3f6;
+  --color-text-secondary: #a7b0bb;
+  --color-text-muted: #737d89;
+  --color-text-disabled: #555f6b;
+
+  /* Interaction */
+  --color-accent: #4d9cff;
+  --color-accent-hover: #68aaff;
+  --color-focus: #70adff;
+
+  /* Semantic */
+  --color-success: #58a96b;
+  --color-warning: #d6a64c;
+  --color-danger: #d66565;
+
+  /* Typography */
+  --font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
-  color: #112a46;
-  background: #f4f7fb;
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-md: 15px;
+  --font-size-lg: 18px;
+  --font-size-xl: 24px;
+  --font-size-2xl: 32px;
+  --font-size-display: 42px;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Layout */
+  --content-max-width: 1280px;
+  --page-padding-desktop: 32px;
+  --page-padding-mobile: 16px;
+
+  /* Components */
+  --radius-card: 14px;
+  --radius-control: 9px;
+  --card-padding: 20px;
+  --control-height: 40px;
+
+  /* Modal */
+  --modal-width: 640px;
+  --modal-width-large: 760px;
+
+  /* Motion */
+  --transition-fast: 150ms;
+  --transition-normal: 200ms;
+
+  font-family: var(--font-family);
+  color: var(--color-text);
+  background: var(--color-bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -18,4 +85,5 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
+  background: var(--color-bg);
 }
