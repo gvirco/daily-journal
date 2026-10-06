@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { DailyJournalEntry, MorningJournal, Rating10 } from './domain/DailyJournalEntry'
+import type { DailyGoal, DailyJournalEntry, MorningJournal, Rating10 } from './domain/DailyJournalEntry'
 import './App.css'
 import { getJournalEntry, saveJournalEntry } from './services/journalStorage'
 
@@ -56,11 +56,54 @@ function App() {
       },
     }
 
-    saveJournalEntry(updatedEntry)
-    setJournalEntry(updatedEntry)
+    saveEntry(updatedEntry)
+  }
+
+  function saveEntry(entry: DailyJournalEntry) {
+    saveJournalEntry(entry)
+    setJournalEntry(entry)
+  }
+
+  function updateGoalText(index: number, text: string) {
+    const existingGoals = journalEntry?.goals ?? []
+    const updatedGoals = Array.from(
+      { length: Math.max(existingGoals.length, index + 1) },
+      (_, goalIndex) => existingGoals[goalIndex] ?? { text: '', completed: false },
+    )
+    const currentGoal = updatedGoals[index]
+
+    updatedGoals[index] = {
+      ...currentGoal,
+      text,
+      completed: text.trim() === '' ? false : currentGoal.completed,
+    }
+
+    const goals = updatedGoals.some((goal) => goal.text.trim() !== '') ? updatedGoals : undefined
+    saveEntry({
+      ...(journalEntry ?? { date: selectedDateValue }),
+      date: selectedDateValue,
+      goals,
+    })
+  }
+
+  function toggleGoalCompleted(index: number) {
+    const goals = [...(journalEntry?.goals ?? [])]
+    const goal = goals[index]
+
+    if (!goal || goal.text.trim() === '') {
+      return
+    }
+
+    goals[index] = { ...goal, completed: !goal.completed }
+    saveEntry({
+      ...(journalEntry ?? { date: selectedDateValue }),
+      date: selectedDateValue,
+      goals,
+    })
   }
 
   const morning = journalEntry?.morning
+  const goals: DailyGoal[] = journalEntry?.goals ?? []
 
   return (
     <main className="journal-shell">
@@ -96,6 +139,61 @@ function App() {
       </header>
 
       <section className="journal-dashboard" aria-label="Journal entry">
+        <section className="goals-card" aria-labelledby="daily-goals-title">
+          <div className="goals-card-header">
+            <div>
+              <p className="goals-card-eyebrow">Today</p>
+              <h2 id="daily-goals-title">Daily Goals</h2>
+            </div>
+          </div>
+          <ol className="goals-list">
+            {Array.from({ length: 3 }, (_, index) => {
+              const goal = goals[index]
+              const isPopulated = goal?.text.trim() !== ''
+              const position = index + 1
+
+              return (
+                <li
+                  className={`goal-row ${index === 0 ? 'goal-row-primary' : ''}`}
+                  key={position}
+                >
+                  <label className="goal-text-label">
+                    <span>Goal #{position}</span>
+                    <input
+                      className="goal-text-input"
+                      type="text"
+                      value={goal?.text ?? ''}
+                      onChange={(event) => updateGoalText(index, event.target.value)}
+                      placeholder="Add a goal"
+                    />
+                  </label>
+                  <div className="goal-actions">
+                    <button
+                      className="goal-completion-button"
+                      type="button"
+                      onClick={() => toggleGoalCompleted(index)}
+                      aria-pressed={goal?.completed ?? false}
+                      disabled={!isPopulated}
+                    >
+                      {goal?.completed ? 'Completed' : 'Complete'}
+                    </button>
+                    {isPopulated && (
+                      <button
+                        className="goal-clear-button"
+                        type="button"
+                        onClick={() => updateGoalText(index, '')}
+                        aria-label={`Clear Goal #${position}`}
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </li>
+              )
+            })}
+          </ol>
+        </section>
+
         <button
           className="morning-card"
           type="button"
