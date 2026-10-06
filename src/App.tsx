@@ -30,6 +30,7 @@ function App() {
     getJournalEntry(toDateInputValue(getCurrentLocalDate())),
   )
   const [isMorningOpen, setIsMorningOpen] = useState(false)
+  const [isNotebookOpen, setIsNotebookOpen] = useState(false)
   const today = getCurrentLocalDate()
   const selectedDateValue = toDateInputValue(selectedDate)
   const formattedDate = new Intl.DateTimeFormat('en-GB', {
@@ -44,6 +45,7 @@ function App() {
     setSelectedDate(date)
     setJournalEntry(getJournalEntry(toDateInputValue(date)))
     setIsMorningOpen(false)
+    setIsNotebookOpen(false)
   }
 
   function updateMorningRating(field: keyof MorningJournal, rating: Rating10) {
@@ -102,8 +104,18 @@ function App() {
     })
   }
 
+  function updateNotes(notes: string) {
+    saveEntry({
+      ...(journalEntry ?? { date: selectedDateValue }),
+      date: selectedDateValue,
+      notes: notes === '' ? undefined : notes,
+    })
+  }
+
   const morning = journalEntry?.morning
   const goals: DailyGoal[] = journalEntry?.goals ?? []
+  const notes = journalEntry?.notes ?? ''
+  const notesPreview = notes.trim() === '' ? null : notes.replace(/\s+/g, ' ').trim()
 
   return (
     <main className="journal-shell">
@@ -216,6 +228,22 @@ function App() {
             </span>
           </span>
         </button>
+
+        <button
+          className="notebook-card"
+          type="button"
+          onClick={() => setIsNotebookOpen(true)}
+          aria-haspopup="dialog"
+        >
+          <span className="notebook-card-title">Daily Notebook</span>
+          <span className="notebook-preview">
+            {notesPreview === null
+              ? 'Not entered'
+              : notesPreview.length > 120
+                ? `${notesPreview.slice(0, 120)}…`
+                : notesPreview}
+          </span>
+        </button>
       </section>
 
       {isMorningOpen && (
@@ -264,6 +292,54 @@ function App() {
                 </div>
               </fieldset>
             ))}
+          </section>
+        </div>
+      )}
+
+      {isNotebookOpen && (
+        <div className="morning-modal-backdrop">
+          <section
+            className="morning-modal notebook-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="notebook-modal-title"
+          >
+            <div className="morning-modal-header">
+              <div>
+                <p className="morning-modal-eyebrow">Daily Notebook</p>
+                <h2 id="notebook-modal-title">What is on your mind?</h2>
+              </div>
+              <div className="notebook-modal-actions">
+                {notes !== '' && (
+                  <button
+                    className="goal-clear-button"
+                    type="button"
+                    onClick={() => updateNotes('')}
+                  >
+                    Clear
+                  </button>
+                )}
+                <button
+                  className="morning-modal-close"
+                  type="button"
+                  onClick={() => setIsNotebookOpen(false)}
+                  aria-label="Close Daily Notebook"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+            <label className="notebook-text-label" htmlFor="daily-notes">
+              Notes
+            </label>
+            <textarea
+              className="notebook-textarea"
+              id="daily-notes"
+              value={notes}
+              onChange={(event) => updateNotes(event.target.value)}
+              placeholder="Write anything you want to remember or work through today."
+              rows={10}
+            />
           </section>
         </div>
       )}
