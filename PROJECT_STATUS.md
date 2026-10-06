@@ -60,30 +60,17 @@ MVP 1.0
 - [x] Design foundation
 - [x] Previous / Today / Next navigation
 - [x] DailyJournalEntry data model
+- [x] Local persistence service
 
-- [ ] Local persistence service
 - [ ] Morning check-in
 - [ ] Daily goals
 - [ ] Daily notebook
 - [ ] Evening review
-- [ ] JSON export/import
-- [ ] CSV export
-- [ ] Mobile usability pass
-
 
 ## Later
 
-### MVP 1.1
-Usability improvements
-
-### MVP 1.2
-Calendar and history
-
-### MVP 1.3
-Google Sheets sync
-
-### MVP 2.0
-Analytics dashboard
+### MVP 1.1 and further
+Needs to be decided
 
 
 ## Architecture Decisions
