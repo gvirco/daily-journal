@@ -39,7 +39,7 @@ MVP 1.0
 
 ## In Progress
 
-- DailyJournalEntry data model
+- Local persistence service
 
 
 ## Next Steps
@@ -55,22 +55,17 @@ MVP 1.0
 
 ## MVP Development Sequence
 
-- [x] Application shell - completed.
-- [x] Today's date - completed.
-- [x] Design foundation - completed.
+- [x] Application shell
+- [x] Today's date
+- [x] Design foundation
 - [x] Previous / Today / Next navigation
-- [ ] DailyJournalEntry data model
+- [x] DailyJournalEntry data model
+
 - [ ] Local persistence service
-- [ ] Morning Check-in
-- [ ] Today's Big 3
-- [ ] Energy tracking
-- [ ] Work & Focus
-- [ ] Training
-- [ ] Food & Coffee
-- [ ] Learning
-- [ ] Personal Progress
-- [ ] Evening Check-out
-- [ ] Sleep Preparation
+- [ ] Morning check-in
+- [ ] Daily goals
+- [ ] Daily notebook
+- [ ] Evening review
 - [ ] JSON export/import
 - [ ] CSV export
 - [ ] Mobile usability pass
