@@ -34,11 +34,12 @@ MVP 1.0
 - DESIGN_SYSTEM.md created
 - Dark-mode design foundation implemented
 - Reusable CSS design tokens established
+- Previous / Today / Next navigation
 
 
 ## In Progress
 
-- Date navigation: Previous / Today / Next
+- DailyJournalEntry data model
 
 
 ## Next Steps
@@ -57,7 +58,7 @@ MVP 1.0
 - [x] Application shell - completed.
 - [x] Today's date - completed.
 - [x] Design foundation - completed.
-- [ ] Previous / Today / Next navigation
+- [x] Previous / Today / Next navigation
 - [ ] DailyJournalEntry data model
 - [ ] Local persistence service
 - [ ] Morning Check-in
