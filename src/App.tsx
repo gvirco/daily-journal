@@ -1,5 +1,11 @@
 import { useState } from 'react'
-import type { DailyGoal, DailyJournalEntry, MorningJournal, Rating10 } from './domain/DailyJournalEntry'
+import type {
+  DailyGoal,
+  DailyJournalEntry,
+  EveningReview,
+  MorningJournal,
+  Rating10,
+} from './domain/DailyJournalEntry'
 import './App.css'
 import { getJournalEntry, saveJournalEntry } from './services/journalStorage'
 
@@ -24,6 +30,12 @@ function toDateInputValue(date: Date) {
   return `${year}-${month}-${day}`
 }
 
+const eveningReflectionFields = [
+  { field: 'whatWorked', label: 'What worked?' },
+  { field: 'whatDidNotWork', label: "What didn't?" },
+  { field: 'whatDidILearn', label: 'What did I learn?' },
+] as const
+
 function App() {
   const [selectedDate, setSelectedDate] = useState(getCurrentLocalDate)
   const [journalEntry, setJournalEntry] = useState<DailyJournalEntry | null>(() =>
@@ -31,6 +43,7 @@ function App() {
   )
   const [isMorningOpen, setIsMorningOpen] = useState(false)
   const [isNotebookOpen, setIsNotebookOpen] = useState(false)
+  const [isEveningOpen, setIsEveningOpen] = useState(false)
   const today = getCurrentLocalDate()
   const selectedDateValue = toDateInputValue(selectedDate)
   const formattedDate = new Intl.DateTimeFormat('en-GB', {
@@ -46,6 +59,7 @@ function App() {
     setJournalEntry(getJournalEntry(toDateInputValue(date)))
     setIsMorningOpen(false)
     setIsNotebookOpen(false)
+    setIsEveningOpen(false)
   }
 
   function updateMorningRating(field: keyof MorningJournal, rating: Rating10) {
@@ -112,10 +126,27 @@ function App() {
     })
   }
 
+  function updateEveningReview(update: Partial<EveningReview>) {
+    const evening = { ...journalEntry?.evening, ...update }
+    const hasEveningContent = Object.values(evening).some(
+      (value) => value !== undefined && value !== '',
+    )
+
+    saveEntry({
+      ...(journalEntry ?? { date: selectedDateValue }),
+      date: selectedDateValue,
+      evening: hasEveningContent ? evening : undefined,
+    })
+  }
+
   const morning = journalEntry?.morning
   const goals: DailyGoal[] = journalEntry?.goals ?? []
   const notes = journalEntry?.notes ?? ''
   const notesPreview = notes.trim() === '' ? null : notes.replace(/\s+/g, ' ').trim()
+  const evening = journalEntry?.evening
+  const reflectionCount = eveningReflectionFields.filter(
+    ({ field }) => evening?.[field]?.trim() !== '',
+  ).length
 
   return (
     <main className="journal-shell">
@@ -244,6 +275,26 @@ function App() {
                 : notesPreview}
           </span>
         </button>
+
+        <button
+          className="notebook-card evening-card"
+          type="button"
+          onClick={() => setIsEveningOpen(true)}
+          aria-haspopup="dialog"
+        >
+          <span className="notebook-card-title">Evening Review</span>
+          <span className="evening-summary">
+            <span className="evening-rating">
+              <span className="evening-rating-value">{evening?.dayRating ?? '—'}</span>
+              <span className="evening-rating-label">Day rating</span>
+            </span>
+            <span className="evening-reflection-status">
+              {reflectionCount === 0
+                ? 'Not entered'
+                : `${reflectionCount} reflection${reflectionCount === 1 ? '' : 's'}`}
+            </span>
+          </span>
+        </button>
       </section>
 
       {isMorningOpen && (
@@ -340,6 +391,78 @@ function App() {
               placeholder="Write anything you want to remember or work through today."
               rows={10}
             />
+          </section>
+        </div>
+      )}
+
+      {isEveningOpen && (
+        <div className="morning-modal-backdrop">
+          <section
+            className="morning-modal evening-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="evening-modal-title"
+          >
+            <div className="morning-modal-header">
+              <div>
+                <p className="morning-modal-eyebrow">Evening Review</p>
+                <h2 id="evening-modal-title">Review your day</h2>
+              </div>
+              <button
+                className="morning-modal-close"
+                type="button"
+                onClick={() => setIsEveningOpen(false)}
+                aria-label="Close Evening Review"
+              >
+                Close
+              </button>
+            </div>
+
+            <fieldset className="rating-control">
+              <legend>Day rating</legend>
+              {evening?.dayRating !== undefined && (
+                <button
+                  className="goal-clear-button"
+                  type="button"
+                  onClick={() => updateEveningReview({ dayRating: undefined })}
+                >
+                  Clear
+                </button>
+              )}
+              <div className="rating-options">
+                {Array.from({ length: 10 }, (_, index) => {
+                  const rating = (index + 1) as Rating10
+                  const isSelected = evening?.dayRating === rating
+
+                  return (
+                    <button
+                      className="rating-option"
+                      type="button"
+                      key={rating}
+                      onClick={() => updateEveningReview({ dayRating: rating })}
+                      aria-pressed={isSelected}
+                    >
+                      {rating}
+                    </button>
+                  )
+                })}
+              </div>
+            </fieldset>
+
+            {eveningReflectionFields.map(({ field, label }) => (
+              <div className="evening-reflection-field" key={field}>
+                <label className="notebook-text-label" htmlFor={field}>
+                  {label}
+                </label>
+                <textarea
+                  className="notebook-textarea evening-textarea"
+                  id={field}
+                  value={evening?.[field] ?? ''}
+                  onChange={(event) => updateEveningReview({ [field]: event.target.value || undefined })}
+                  rows={3}
+                />
+              </div>
+            ))}
           </section>
         </div>
       )}
