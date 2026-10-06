@@ -46,6 +46,8 @@ Development instructions will be added after project initialization.
 
 - `PRODUCT_SPEC.md` — product scope and acceptance criteria
 - `PROJECT_STATUS.md` — current project state and next steps
+- `DESIGN_SYSTEM.md` — visual language, design tokens, layout, interaction patterns, and UI conventions.
+- `DEVELOPMENT_WORKFLOW.md` — human development, review, Git, and Pull Request workflow.
 
 
 ## Development Principle

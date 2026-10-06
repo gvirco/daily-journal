@@ -17,6 +17,7 @@ Use the following documents when relevant:
 - `PRODUCT_SPEC.md` — product requirements, MVP scope, and acceptance criteria.
 - `PROJECT_STATUS.md` — current development phase and planned next steps.
 - `README.md` — project overview and developer usage instructions.
+- `DEVELOPMENT_WORKFLOW.md` — human development, review, Git, and Pull Request workflow.
 
 Do not duplicate these documents unnecessarily.
 
