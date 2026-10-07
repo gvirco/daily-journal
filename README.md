@@ -1,61 +1,50 @@
 # Daily Journal
 
-A personal high-performance daily journal built as a small browser application.
+Daily Journal is a small, local-first browser journal for daily reflection, priorities, and execution.
 
-The application tracks structured daily information about:
+## Current MVP state
 
-- sleep;
-- energy;
-- priorities;
-- work;
-- food;
-- training;
-- learning;
-- personal progress;
-- daily performance.
+The core daily-journal experience is implemented. Entries are stored locally in the browser and are separated by calendar date.
 
-The long-term goal is to build a personal dataset that can be analysed to understand which behaviours and conditions influence energy and productivity.
+Implemented core functionality:
 
+- date navigation;
+- local persistence;
+- Morning check-in;
+- Daily Goals;
+- Daily Notebook;
+- Evening Review.
 
-## Status
+Next major MVP work:
 
-MVP 1.0 — development starting.
-
+- export and import;
+- automated tests;
+- CI;
+- deployment.
 
 ## Technology
 
 - React
 - TypeScript
 - Vite
-- localStorage
+- ESLint
+- browser `localStorage`
 
-Planned later:
+## Run and verify
 
-- Vitest
-- GitHub Actions
-- Vercel
-- Google Sheets synchronization
+```bash
+npm install
+npm run dev
+```
 
-
-## Development
-
-Development instructions will be added after project initialization.
-
+```bash
+npm run lint
+npm run build
+```
 
 ## Documentation
 
-- `PRODUCT_SPEC.md` — product scope and acceptance criteria
-- `PROJECT_STATUS.md` — current project state and next steps
-- `DESIGN_SYSTEM.md` — visual language, design tokens, layout, interaction patterns, and UI conventions.
-- `DEVELOPMENT_WORKFLOW.md` — human development, review, Git, and Pull Request workflow.
-
-
-## Development Principle
-
-Build one small feature at a time:
-
-Feature
-→ Run
-→ Verify
-→ Test
-→ Commit
+- `AGENTS.md` — coding-agent contract and architecture constraints.
+- `PRODUCT_SPEC.md` — MVP product scope and acceptance criteria.
+- `DESIGN_SYSTEM.md` — durable UI guidance and canonical tokens.
+- `DEVELOPMENT_WORKFLOW.md` — feature, review, Git, and PR checklist.
