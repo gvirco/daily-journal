@@ -1,95 +1,34 @@
 # Daily Journal — Agent Instructions
 
-## Project Purpose
+## Working agreement
 
-Daily Journal is a small browser-based personal performance journal.
+- Implement only the requested scope. Do not add roadmap work without an explicit request.
+- Prefer simple, understandable solutions suitable for a small MVP.
+- Avoid premature abstractions and unnecessary dependencies.
+- Follow the existing TypeScript and project conventions; use explicit types rather than `any` where practical.
+- Do not commit changes unless explicitly requested.
 
-This repository is intentionally being used as a learning project for
-professional AI-assisted software development practices.
+## Architecture
 
-Keep solutions simple, understandable, and appropriate for a small MVP.
+- The MVP is local-first. Do not introduce a backend, authentication, cloud services, or external APIs unless explicitly requested later.
+- A `DailyJournalEntry` represents exactly one local calendar date, formatted `YYYY-MM-DD`.
+- UI components must not access `localStorage` directly. Read and write journal data through the journal service/storage layer.
 
-## Sources of Truth
+## Documentation
 
-Use the following documents when relevant:
+- Read `AGENTS.md` by default.
+- Read other repository documentation only when it is relevant to the task:
+  - `PRODUCT_SPEC.md` for product scope and acceptance criteria;
+  - `DESIGN_SYSTEM.md` for UI work;
+  - `DEVELOPMENT_WORKFLOW.md` for development, review, and Git workflow;
+  - `README.md` for the repository overview and commands.
 
-- `DESIGN_SYSTEM.md` — visual language, design tokens, layout, interaction patterns, and UI conventions.
-- `PRODUCT_SPEC.md` — product requirements, MVP scope, and acceptance criteria.
-- `PROJECT_STATUS.md` — current development phase and planned next steps.
-- `README.md` — project overview and developer usage instructions.
-- `DEVELOPMENT_WORKFLOW.md` — human development, review, Git, and Pull Request workflow.
+## Quality
 
-Do not duplicate these documents unnecessarily.
+- Follow `DESIGN_SYSTEM.md` for UI work and reuse its existing tokens.
+- Run relevant verification before finishing. For code changes, normally run:
 
-## Current Technology
-
-- React
-- TypeScript
-- Vite
-- ESLint
-
-Planned for MVP:
-
-- localStorage persistence
-- Vitest
-- GitHub Actions
-- Vercel
-
-## MVP Architecture Rules
-
-### Local-first
-
-MVP 1.0 has no backend, authentication, cloud database, or external API.
-
-### Persistence boundary
-
-React UI components must not access `localStorage` directly.
-
-Persistence must be implemented through a dedicated journal
-storage/service layer.
-
-This should allow the persistence implementation to be changed later,
-for example to add Google Sheets synchronization.
-
-### Daily Journal domain
-
-The primary domain object is a journal entry associated with one
-calendar date.
-
-Keep the data model explicit and strongly typed.
-
-## Development Approach
-
-Build the application incrementally.
-
-For each task:
-
-1. Implement only the requested scope.
-2. Avoid adding unrelated functionality.
-3. Keep the implementation as simple as reasonably possible.
-4. Run relevant verification before considering the task complete.
-5. Explain any important architectural decision or trade-off.
-
-Do not implement future roadmap features unless explicitly requested.
-
-## Code Quality
-
-- Use TypeScript types rather than `any` where practical.
-- Prefer small, clear components and functions.
-- Avoid premature abstractions.
-- Avoid introducing new dependencies without a clear need.
-- Follow the existing project structure and naming conventions.
-- Preserve readability over cleverness.
-- Follow `DESIGN_SYSTEM.md` for all visual implementation.
-- Reuse existing design tokens instead of introducing arbitrary colours, spacing, radii, or typography values.
-- Prefer restrained, data-first UI over decorative styling.
-
-## Verification
-
-For code changes, run relevant available checks.
-
-At minimum, when appropriate:
-
-```bash
-npm run lint
-npm run build
+  ```bash
+  npm run lint
+  npm run build
+  ```
