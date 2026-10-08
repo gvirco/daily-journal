@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test:db": "tsx --test server/db.test.ts",
     "test:auth": "tsx --test server/auth.test.ts",
-    "test:journal": "tsx --test server/journal.test.ts"
+    "test:journal": "tsx --test server/journal.test.ts",
+    "test:frontend": "tsx --test tests/journalApi.test.ts"
   },
   "dependencies": {
     "argon2": "^0.45.1",

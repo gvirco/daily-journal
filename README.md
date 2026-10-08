@@ -36,20 +36,25 @@ Next major MVP work:
 
 ```bash
 npm install
-npm run dev
+npm run dev:api
 ```
 
-In a second terminal, start the API foundation:
+In a second terminal, start the Vite frontend:
 
 ```bash
-npm run dev:api
+npm run dev
 ```
 
 The API listens on `http://localhost:3001` by default. Confirm it is running
 with `GET /health`. The SQLite database is created at
 `data/daily-journal.sqlite` by default. Set `DATABASE_PATH` or `PORT` in your
 shell to override either value. Runtime databases and `.env` files are ignored
-by Git.
+by Git. Vite proxies `/api` requests to `http://localhost:3001`, so browser
+sessions use the same origin during local development.
+
+Open the Vite URL shown in the terminal, register an account, then use the
+journal normally. Existing browser `localStorage` entries remain untouched and
+are not imported into the authenticated API.
 
 ## API authentication
 
@@ -88,6 +93,7 @@ npm run build
 npm run test:db
 npm run test:auth
 npm run test:journal
+npm run test:frontend
 ```
 
 ## Documentation

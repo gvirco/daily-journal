@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type {
   DailyGoal,
   DailyJournalEntry,
@@ -7,7 +7,15 @@ import type {
   Rating10,
 } from './domain/DailyJournalEntry'
 import './App.css'
-import { getJournalEntry, saveJournalEntry } from './services/journalStorage'
+import { AuthScreen } from './components/AuthScreen'
+import {
+  ApiError,
+  getCurrentUser,
+  getJournalEntry,
+  logout,
+  saveJournalEntry,
+  type AuthenticatedUser,
+} from './services/journalApi'
 
 function getCurrentLocalDate() {
   const now = new Date()
@@ -38,12 +46,20 @@ const eveningReflectionFields = [
 
 function App() {
   const [selectedDate, setSelectedDate] = useState(getCurrentLocalDate)
-  const [journalEntry, setJournalEntry] = useState<DailyJournalEntry | null>(() =>
-    getJournalEntry(toDateInputValue(getCurrentLocalDate())),
-  )
+  const [user, setUser] = useState<AuthenticatedUser | null>(null)
+  const [isAuthLoading, setIsAuthLoading] = useState(true)
+  const [authError, setAuthError] = useState<string | null>(null)
+  const [journalEntry, setJournalEntry] = useState<DailyJournalEntry | null>(null)
+  const [isEntryLoading, setIsEntryLoading] = useState(false)
+  const [entryError, setEntryError] = useState<{ date: string; message: string; phase: 'load' | 'save' } | null>(null)
+  const [pendingSaveCount, setPendingSaveCount] = useState(0)
+  const [reloadNonce, setReloadNonce] = useState(0)
   const [isMorningOpen, setIsMorningOpen] = useState(false)
   const [isNotebookOpen, setIsNotebookOpen] = useState(false)
   const [isEveningOpen, setIsEveningOpen] = useState(false)
+  const loadSequence = useRef(0)
+  const entryRevisions = useRef(new Map<string, number>())
+  const saveQueues = useRef(new Map<string, Promise<void>>())
   const today = getCurrentLocalDate()
   const selectedDateValue = toDateInputValue(selectedDate)
   const formattedDate = new Intl.DateTimeFormat('en-GB', {
@@ -54,9 +70,63 @@ function App() {
   }).format(selectedDate)
   const isToday = selectedDateValue === toDateInputValue(today)
 
+  useEffect(() => {
+    let isCurrent = true
+
+    getCurrentUser()
+      .then((restoredUser) => {
+        if (isCurrent) setUser(restoredUser)
+      })
+      .catch((error: unknown) => {
+        if (isCurrent) setAuthError(error instanceof Error ? error.message : 'Unable to restore your session.')
+      })
+      .finally(() => {
+        if (isCurrent) setIsAuthLoading(false)
+      })
+
+    return () => { isCurrent = false }
+  }, [])
+
+  useEffect(() => {
+    if (user === null) return
+
+    const date = selectedDateValue
+    const controller = new AbortController()
+    const requestId = loadSequence.current + 1
+    loadSequence.current = requestId
+    const revisionAtRequestStart = entryRevisions.current.get(date) ?? 0
+    queueMicrotask(() => {
+      if (loadSequence.current === requestId) {
+        setIsEntryLoading(true)
+        setEntryError(null)
+      }
+    })
+
+    getJournalEntry(date, controller.signal)
+      .then((entry) => {
+        const currentRevision = entryRevisions.current.get(date) ?? 0
+        if (loadSequence.current === requestId && currentRevision === revisionAtRequestStart) setJournalEntry(entry)
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted || loadSequence.current !== requestId) return
+        if (error instanceof ApiError && error.status === 401) {
+          setUser(null)
+          return
+        }
+        setEntryError({ date, message: error instanceof Error ? error.message : 'Unable to load this entry.', phase: 'load' })
+      })
+      .finally(() => {
+        if (loadSequence.current === requestId) setIsEntryLoading(false)
+      })
+
+    return () => controller.abort()
+  }, [reloadNonce, selectedDateValue, user])
+
   function selectDate(date: Date) {
     setSelectedDate(date)
-    setJournalEntry(getJournalEntry(toDateInputValue(date)))
+    setJournalEntry(null)
+    setIsEntryLoading(true)
+    setEntryError(null)
     setIsMorningOpen(false)
     setIsNotebookOpen(false)
     setIsEveningOpen(false)
@@ -76,8 +146,48 @@ function App() {
   }
 
   function saveEntry(entry: DailyJournalEntry) {
-    saveJournalEntry(entry)
+    const revision = (entryRevisions.current.get(entry.date) ?? 0) + 1
+    entryRevisions.current.set(entry.date, revision)
+    setEntryError(null)
     setJournalEntry(entry)
+    setPendingSaveCount((count) => count + 1)
+
+    const previousSave = saveQueues.current.get(entry.date) ?? Promise.resolve()
+    const queuedSave = previousSave
+      .catch(() => undefined)
+      .then(() => saveJournalEntry(entry))
+    saveQueues.current.set(entry.date, queuedSave)
+
+    queuedSave
+      .catch((error: unknown) => {
+        if (entryRevisions.current.get(entry.date) !== revision) return
+        if (error instanceof ApiError && error.status === 401) {
+          setUser(null)
+          return
+        }
+        setEntryError({ date: entry.date, message: error instanceof Error ? error.message : 'Unable to save your entry.', phase: 'save' })
+      })
+      .finally(() => {
+        if (saveQueues.current.get(entry.date) === queuedSave) saveQueues.current.delete(entry.date)
+        setPendingSaveCount((count) => Math.max(0, count - 1))
+      })
+  }
+
+  async function handleLogout() {
+    try {
+      await logout()
+    } finally {
+      setUser(null)
+      setJournalEntry(null)
+    }
+  }
+
+  if (isAuthLoading) {
+    return <main className="auth-shell"><p className="auth-status">Restoring your session…</p></main>
+  }
+
+  if (user === null) {
+    return <AuthScreen initialError={authError} onAuthenticated={setUser} />
   }
 
   function updateGoalText(index: number, text: string) {
@@ -179,8 +289,26 @@ function App() {
             Next
           </button>
         </nav>
+        <div className="journal-account">
+          <span>Signed in as {user.username}</span>
+          <button className="journal-logout" onClick={handleLogout} type="button">Sign out</button>
+        </div>
+        {entryError?.date === selectedDateValue && (
+          <p className="journal-sync-status journal-sync-error" role="alert">{entryError.message}</p>
+        )}
+        {entryError?.date !== selectedDateValue && pendingSaveCount > 0 && (
+          <p className="journal-sync-status" aria-live="polite">Saving changes…</p>
+        )}
       </header>
 
+      {isEntryLoading ? (
+        <p className="journal-loading" aria-live="polite">Loading journal entry…</p>
+      ) : entryError?.date === selectedDateValue && entryError.phase === 'load' ? (
+        <div className="journal-load-error">
+          <p>{entryError.message}</p>
+          <button className="date-navigation-button" onClick={() => setReloadNonce((value) => value + 1)} type="button">Retry</button>
+        </div>
+      ) : (
       <section className="journal-dashboard" aria-label="Journal entry">
         <section className="goals-card" aria-labelledby="daily-goals-title">
           <div className="goals-card-header">
@@ -296,6 +424,7 @@ function App() {
           </span>
         </button>
       </section>
+      )}
 
       {isMorningOpen && (
         <div className="morning-modal-backdrop">
