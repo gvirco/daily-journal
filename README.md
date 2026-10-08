@@ -1,26 +1,16 @@
 # Daily Journal
 
-Daily Journal is a small, local-first browser journal for daily reflection, priorities, and execution.
+Daily Journal is a browser-based journal for daily reflection, priorities, and execution, with authenticated per-user data stored in a local SQLite database.
 
-## Current MVP state
+## Current implementation
 
-The core daily-journal experience is implemented. Entries are stored locally in the browser and are separated by calendar date.
+Implemented: date navigation, Morning check-in, Daily Goals, Daily Notebook,
+Evening Review, username/password registration and login, logout, persistent
+sessions, and per-user journal autosave to SQLite. Database, authentication,
+journal API, and API-client tests are available.
 
-Implemented core functionality:
-
-- date navigation;
-- local persistence;
-- Morning check-in;
-- Daily Goals;
-- Daily Notebook;
-- Evening Review.
-
-Next major MVP work:
-
-- export and import;
-- automated tests;
-- CI;
-- deployment.
+Remaining planned work: JSON/CSV export and JSON import, CI, and deployment.
+This application currently uses a local database, not cloud storage.
 
 ## Technology
 
@@ -28,9 +18,9 @@ Next major MVP work:
 - TypeScript
 - Vite
 - ESLint
-- browser `localStorage`
-- Express
-- SQLite (API foundation)
+- Express REST API and SQLite (local per-user persistence)
+- Argon2id password hashing and cookie-based sessions
+- Legacy browser `localStorage` (retained, not used for active journal storage)
 
 ## Run and verify
 
@@ -95,6 +85,14 @@ npm run test:auth
 npm run test:journal
 npm run test:frontend
 ```
+
+## Data retention
+
+The local database file (`data/daily-journal.sqlite` by default) persists across
+API restarts but is not automatically backed up. It is ignored by Git and is
+not included in pushes or PRs. Back it up separately before relying on it for
+long-term personal data. Old browser `localStorage` entries are preserved but
+are not automatically migrated to registered users.
 
 ## Documentation
 
