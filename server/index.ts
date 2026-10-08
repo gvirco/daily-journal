@@ -5,7 +5,7 @@ const port = Number(process.env.PORT ?? 3001)
 const databasePath = process.env.DATABASE_PATH ?? defaultDatabasePath
 
 const database = initializeDatabase(databasePath)
-const app = createApp()
+const app = createApp(database)
 
 const server = app.listen(port, () => {
   console.log(`Daily Journal API listening on http://localhost:${port}`)

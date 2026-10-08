@@ -51,10 +51,29 @@ with `GET /health`. The SQLite database is created at
 shell to override either value. Runtime databases and `.env` files are ignored
 by Git.
 
+## API authentication
+
+The API supports username/password registration and login. Passwords are stored
+as Argon2id hashes; session tokens are stored server-side in SQLite and sent in
+`HttpOnly`, `SameSite=Lax` cookies. Cookies use the `Secure` attribute for HTTPS
+requests.
+
+- `POST /api/auth/register` with `{ "username", "password" }` creates an account and signs it in.
+- `POST /api/auth/login` with `{ "username", "password" }` creates a session.
+- `POST /api/auth/logout` ends the current session.
+- `GET /api/auth/me` returns the signed-in user or `401`.
+
+Usernames must be 3-32 characters using letters, digits, `_`, or `-`.
+Passwords must be 8-128 characters. Existing API-foundation databases are
+migrated in place: existing users and journal entries are retained, and old
+email values are preserved as legacy data. Legacy users have no password
+credentials.
+
 ```bash
 npm run lint
 npm run build
 npm run test:db
+npm run test:auth
 ```
 
 ## Documentation

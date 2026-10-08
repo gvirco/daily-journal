@@ -9,9 +9,11 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:db": "tsx --test server/db.test.ts"
+    "test:db": "tsx --test server/db.test.ts",
+    "test:auth": "tsx --test server/auth.test.ts"
   },
   "dependencies": {
+    "argon2": "^0.45.1",
     "express": "^5.2.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
