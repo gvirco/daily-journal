@@ -29,6 +29,8 @@ Next major MVP work:
 - Vite
 - ESLint
 - browser `localStorage`
+- Express
+- SQLite (API foundation)
 
 ## Run and verify
 
@@ -37,9 +39,22 @@ npm install
 npm run dev
 ```
 
+In a second terminal, start the API foundation:
+
+```bash
+npm run dev:api
+```
+
+The API listens on `http://localhost:3001` by default. Confirm it is running
+with `GET /health`. The SQLite database is created at
+`data/daily-journal.sqlite` by default. Set `DATABASE_PATH` or `PORT` in your
+shell to override either value. Runtime databases and `.env` files are ignored
+by Git.
+
 ```bash
 npm run lint
 npm run build
+npm run test:db
 ```
 
 ## Documentation
