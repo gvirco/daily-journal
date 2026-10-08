@@ -69,11 +69,25 @@ migrated in place: existing users and journal entries are retained, and old
 email values are preserved as legacy data. Legacy users have no password
 credentials.
 
+## Journal API
+
+Journal endpoints require the authentication session cookie. The user identity is
+always derived from that session, not from the request body.
+
+- `GET /api/entries/:date` returns that user's entry for a real `YYYY-MM-DD` date, or `404`.
+- `PUT /api/entries/:date` creates or completely replaces that user's entry.
+
+The `PUT` body is a `DailyJournalEntry` whose `date` must exactly match `:date`.
+Sections are optional, so partially completed entries are valid. Ratings must be
+integers from 1 through 10; goals require a string `text` and boolean
+`completed`; and the API rejects fields outside the domain model.
+
 ```bash
 npm run lint
 npm run build
 npm run test:db
 npm run test:auth
+npm run test:journal
 ```
 
 ## Documentation
