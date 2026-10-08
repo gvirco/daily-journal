@@ -10,9 +10,12 @@
 
 ## Architecture
 
-- The MVP is local-first. Do not introduce a backend, authentication, cloud services, or external APIs unless explicitly requested later.
-- A `DailyJournalEntry` represents exactly one local calendar date, formatted `YYYY-MM-DD`.
-- UI components must not access `localStorage` directly. Read and write journal data through the journal service/storage layer.
+- Daily Journal uses a React/TypeScript frontend and a local Express API backed by persistent SQLite. Do not add cloud services or external integrations without an explicit request.
+- A `DailyJournalEntry` represents exactly one local calendar date, formatted `YYYY-MM-DD`, for one authenticated user.
+- UI components must access journal data through `src/services/journalApi.ts`, not directly through storage or `localStorage`.
+- The API derives the user identity from the server-side session, never a client-supplied user ID. Keep every journal operation scoped to the authenticated user.
+- Preserve the existing legacy `localStorage` data. Do not migrate it or use it as a fallback unless explicitly requested.
+- Do not store plaintext passwords, expose session tokens to JavaScript, or commit runtime SQLite files or secrets.
 
 ## Documentation
 
@@ -32,3 +35,6 @@
   npm run lint
   npm run build
   ```
+
+For relevant changes, also run `npm run test:db`, `npm run test:auth`,
+`npm run test:journal`, and `npm run test:frontend`.
