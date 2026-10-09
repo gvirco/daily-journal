@@ -560,6 +560,58 @@
   gap: var(--space-2);
 }
 
+.notebook-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(92vw, 1200px);
+  height: 90dvh;
+  max-height: calc(100vh - var(--space-8));
+  padding: var(--space-8);
+}
+
+.notebook-modal-heading {
+  min-width: 0;
+}
+
+.notebook-modal-date {
+  display: block;
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.notebook-editor-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  margin-top: var(--space-6);
+}
+
+.notebook-modal .notebook-textarea {
+  flex: 1;
+  min-height: 0;
+  margin-top: 0;
+  padding: var(--space-5);
+  resize: none;
+  overflow-y: auto;
+}
+
+.notebook-save-status {
+  align-self: flex-start;
+  min-height: var(--space-5);
+  margin-top: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.notebook-save-status.journal-save-status-saved {
+  color: var(--color-success);
+}
+
+.notebook-save-status.journal-save-status-failed {
+  color: var(--color-danger);
+}
+
 .notebook-text-label {
   display: block;
   margin-top: var(--space-6);
@@ -671,6 +723,13 @@
 
   .morning-modal {
     padding: var(--space-4);
+  }
+
+  .notebook-modal {
+    width: 100%;
+    height: calc(100dvh - var(--space-4));
+    max-height: none;
+    padding: var(--space-5);
   }
 
   .rating-options {

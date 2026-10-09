@@ -65,6 +65,9 @@ function App() {
   const pendingEntries = useRef(new Map<string, { entry: DailyJournalEntry; revision: number }>())
   const saveTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
   const journalEntryRef = useRef<DailyJournalEntry | null>(null)
+  const notebookTriggerRef = useRef<HTMLButtonElement>(null)
+  const notebookCloseRef = useRef<HTMLButtonElement>(null)
+  const notebookTextareaRef = useRef<HTMLTextAreaElement>(null)
   const today = getCurrentLocalDate()
   const selectedDateValue = toDateInputValue(selectedDate)
   const formattedDate = new Intl.DateTimeFormat('en-GB', {
@@ -234,6 +237,27 @@ function App() {
     }
   }
 
+  async function closeNotebook() {
+    await flushPendingSave(selectedDateValue)
+    setIsNotebookOpen(false)
+    requestAnimationFrame(() => notebookTriggerRef.current?.focus())
+  }
+
+  useEffect(() => {
+    if (!isNotebookOpen) return
+
+    notebookTextareaRef.current?.focus()
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        notebookCloseRef.current?.click()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isNotebookOpen])
+
   if (isAuthLoading) {
     return <main className="auth-shell"><p className="auth-status">Restoring your session…</p></main>
   }
@@ -313,6 +337,14 @@ function App() {
   const reflectionCount = eveningReflectionFields.filter(
     ({ field }) => evening?.[field]?.trim() !== '',
   ).length
+  const activeSaveStatus = saveStatus.date === selectedDateValue ? saveStatus.status : 'idle'
+  const saveStatusLabel = activeSaveStatus === 'saving'
+    ? 'Saving'
+    : activeSaveStatus === 'saved'
+      ? 'Saved'
+      : activeSaveStatus === 'failed'
+        ? 'Save failed'
+        : ''
 
   return (
     <main className="journal-shell">
@@ -349,14 +381,8 @@ function App() {
           <span>Signed in as {user.username}</span>
           <button className="journal-logout" onClick={handleLogout} type="button">Sign out</button>
         </div>
-        <span className={`journal-save-status journal-save-status-${saveStatus.date === selectedDateValue ? saveStatus.status : 'idle'}`} aria-live="polite">
-          {saveStatus.date === selectedDateValue && saveStatus.status !== 'idle'
-            ? saveStatus.status === 'saving'
-              ? 'Saving'
-              : saveStatus.status === 'saved'
-                ? 'Saved'
-                : 'Save failed'
-            : ''}
+        <span className={`journal-save-status journal-save-status-${activeSaveStatus}`} aria-live="polite">
+          {saveStatusLabel}
         </span>
         {entryError?.date === selectedDateValue && entryError.phase === 'save' && (
           <p className="journal-sync-error" role="alert">{entryError.message}</p>
@@ -377,6 +403,7 @@ function App() {
           type="button"
           onClick={() => setIsNotebookOpen(true)}
           aria-haspopup="dialog"
+          ref={notebookTriggerRef}
         >
           <span className="notebook-card-title">Daily Notebook</span>
           <span className="notebook-preview">
@@ -528,7 +555,7 @@ function App() {
       )}
 
       {isNotebookOpen && (
-        <div className="morning-modal-backdrop">
+        <div className="morning-modal-backdrop notebook-modal-backdrop">
           <section
             className="morning-modal notebook-modal"
             role="dialog"
@@ -536,42 +563,38 @@ function App() {
             aria-labelledby="notebook-modal-title"
           >
             <div className="morning-modal-header">
-              <div>
+              <div className="notebook-modal-heading">
                 <p className="morning-modal-eyebrow">Daily Notebook</p>
                 <h2 id="notebook-modal-title">What is on your mind?</h2>
+                <time className="notebook-modal-date" dateTime={selectedDateValue}>{formattedDate}</time>
               </div>
               <div className="notebook-modal-actions">
-                {notes !== '' && (
-                  <button
-                    className="goal-clear-button"
-                    type="button"
-                    onClick={() => updateNotes('')}
-                  >
-                    Clear
-                  </button>
-                )}
                 <button
                   className="morning-modal-close"
                   type="button"
-                  onClick={() => setIsNotebookOpen(false)}
+                  onClick={() => void closeNotebook()}
                   aria-label="Close Daily Notebook"
+                  ref={notebookCloseRef}
                 >
                   Close
                 </button>
               </div>
             </div>
-            <label className="notebook-text-label" htmlFor="daily-notes">
-              Notes
-            </label>
-            <textarea
-              className="notebook-textarea"
-              id="daily-notes"
-              value={notes}
-              onChange={(event) => updateNotes(event.target.value)}
-              onBlur={() => void flushPendingSave(selectedDateValue)}
-              placeholder="Write anything you want to remember or work through today."
-              rows={10}
-            />
+            <div className="notebook-editor-body">
+              <textarea
+                className="notebook-textarea"
+                id="daily-notes"
+                ref={notebookTextareaRef}
+                value={notes}
+                onChange={(event) => updateNotes(event.target.value)}
+                onBlur={() => void flushPendingSave(selectedDateValue)}
+                aria-label="Daily notebook notes"
+                placeholder="Write anything you want to remember or work through today."
+              />
+            </div>
+            <span className={`notebook-save-status journal-save-status-${activeSaveStatus}`} aria-live="polite">
+              {saveStatusLabel}
+            </span>
           </section>
         </div>
       )}
