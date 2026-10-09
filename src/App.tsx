@@ -353,37 +353,43 @@ function App() {
         <time className="journal-date" dateTime={toDateInputValue(selectedDate)}>
           {formattedDate}
         </time>
-        <nav className="date-navigation" aria-label="Date navigation">
-          <button
-            className="date-navigation-button"
-            type="button"
-            onClick={() => selectDate(addCalendarDays(selectedDate, -1))}
-          >
-            Previous
-          </button>
-          <button
-            className="date-navigation-button"
-            type="button"
-            onClick={() => selectDate(getCurrentLocalDate())}
-            disabled={isToday}
-          >
-            Today
-          </button>
-          <button
-            className="date-navigation-button"
-            type="button"
-            onClick={() => selectDate(addCalendarDays(selectedDate, 1))}
-          >
-            Next
-          </button>
-        </nav>
-        <div className="journal-account">
-          <span>Signed in as {user.username}</span>
-          <button className="journal-logout" onClick={handleLogout} type="button">Sign out</button>
+        <div className="journal-header-toolbar">
+          <nav className="date-navigation" aria-label="Date navigation">
+            <button
+              className="date-navigation-button"
+              type="button"
+              onClick={() => selectDate(addCalendarDays(selectedDate, -1))}
+            >
+              <span className="date-navigation-chevron" aria-hidden="true">‹</span>
+              Previous
+            </button>
+            <button
+              className="date-navigation-button"
+              type="button"
+              onClick={() => selectDate(getCurrentLocalDate())}
+              disabled={isToday}
+            >
+              Today
+            </button>
+            <button
+              className="date-navigation-button"
+              type="button"
+              onClick={() => selectDate(addCalendarDays(selectedDate, 1))}
+            >
+              Next
+              <span className="date-navigation-chevron" aria-hidden="true">›</span>
+            </button>
+          </nav>
+          <div className="journal-header-meta">
+            <span className={`journal-save-status journal-save-status-${activeSaveStatus}`} aria-live="polite">
+              {saveStatusLabel}
+            </span>
+            <div className="journal-account">
+              <span>Signed in as {user.username}</span>
+              <button className="journal-logout" onClick={handleLogout} type="button">Sign out</button>
+            </div>
+          </div>
         </div>
-        <span className={`journal-save-status journal-save-status-${activeSaveStatus}`} aria-live="polite">
-          {saveStatusLabel}
-        </span>
         {entryError?.date === selectedDateValue && entryError.phase === 'save' && (
           <p className="journal-sync-error" role="alert">{entryError.message}</p>
         )}
