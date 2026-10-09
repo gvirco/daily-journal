@@ -185,8 +185,8 @@
 
 .auth-card {
   width: min(100%, 420px);
-  padding: var(--space-8);
-  background: var(--color-surface);
+  padding: var(--space-6);
+  background: var(--color-surface-elevated);
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-card);
 }
@@ -201,9 +201,10 @@
 }
 
 .auth-card h1 {
-  margin: var(--space-2) 0 0;
+  margin: var(--space-1) 0 0;
   color: var(--color-text);
-  font-size: var(--font-size-2xl);
+  font-size: var(--font-size-xl);
+  line-height: 1.2;
 }
 
 .auth-copy {
@@ -214,7 +215,7 @@
 
 .auth-form {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-3);
   margin-top: var(--space-6);
 }
 
@@ -226,13 +227,17 @@
 
 .auth-input {
   min-height: var(--control-height);
-  margin-bottom: var(--space-2);
   padding: 0 var(--space-3);
   color: var(--color-text);
   background: var(--color-bg);
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-control);
   font: inherit;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.auth-input:hover {
+  border-color: var(--color-text-muted);
 }
 
 .auth-submit {
@@ -265,7 +270,7 @@
 
 .auth-switch {
   width: 100%;
-  margin-top: var(--space-4);
+  margin-top: var(--space-3);
 }
 
 .auth-status {
@@ -426,6 +431,7 @@
 .morning-card:focus-visible,
 .notebook-card:focus-visible,
 .morning-modal-close:focus-visible,
+.rating-clear-button:focus-visible,
 .rating-option:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
@@ -444,25 +450,53 @@
 .morning-summary {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-3);
-  margin-top: var(--space-5);
+  gap: var(--space-2);
+  margin-top: var(--space-4);
 }
 
-.morning-metric {
+.segmented-indicator {
   display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.segmented-indicator-value-row {
+  display: flex;
+  align-items: baseline;
   gap: var(--space-1);
 }
 
-.morning-metric-value {
+.segmented-indicator-value {
   color: var(--color-text);
   font-size: var(--font-size-xl);
   font-weight: 600;
   line-height: 1;
 }
 
-.morning-metric-label {
+.segmented-indicator-context,
+.segmented-indicator-label {
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
+}
+
+.segmented-indicator-label {
+  order: -1;
+}
+
+.segmented-indicator-track {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.segmented-indicator-segment {
+  height: var(--space-1);
+  background: var(--color-border-subtle);
+  border-radius: var(--radius-control);
+}
+
+.segmented-indicator-segment.is-active {
+  background: var(--color-accent);
 }
 
 .notebook-card {
@@ -503,32 +537,20 @@
 }
 
 .evening-summary {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: end;
   justify-content: space-between;
   gap: var(--space-3);
+  margin-top: var(--space-4);
 }
 
-.evening-rating {
-  display: grid;
-  gap: var(--space-1);
+.evening-summary .segmented-indicator-track {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.evening-rating-value {
-  color: var(--color-text);
-  font-size: var(--font-size-xl);
-  font-weight: 600;
-  line-height: 1;
-}
-
-.evening-rating-label,
-.evening-reflection-status {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
-}
-
-.evening-reflection-status {
-  margin-bottom: var(--space-1);
+.evening-summary .segmented-indicator:first-child .segmented-indicator-track {
+  grid-template-columns: repeat(10, minmax(0, 1fr));
 }
 
 .morning-modal-backdrop {
@@ -548,11 +570,17 @@
   border-radius: var(--radius-card);
 }
 
+.morning-modal:not(.notebook-modal) {
+  padding: var(--space-6);
+}
+
 .morning-modal-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: var(--border-width) solid var(--color-border-subtle);
 }
 
 .morning-modal-header h2 {
@@ -567,7 +595,8 @@
 }
 
 .morning-modal-close,
-.rating-option {
+.rating-option,
+.rating-clear-button {
   min-height: var(--control-height);
   color: var(--color-text-secondary);
   background: var(--color-surface);
@@ -582,6 +611,11 @@
 }
 
 .morning-modal-close {
+  padding: 0 var(--space-3);
+}
+
+.rating-clear-button {
+  margin-top: var(--space-2);
   padding: 0 var(--space-3);
 }
 
@@ -680,10 +714,6 @@
   overflow-y: auto;
 }
 
-.rating-control > .goal-clear-button {
-  margin-top: var(--space-2);
-}
-
 .evening-reflection-field .notebook-text-label {
   margin-top: var(--space-5);
 }
@@ -694,7 +724,7 @@
 
 .rating-control {
   min-width: 0;
-  margin: var(--space-6) 0 0;
+  margin: var(--space-5) 0 0;
   padding: 0;
   border: 0;
 }
@@ -709,12 +739,13 @@
 .rating-options {
   display: grid;
   grid-template-columns: repeat(10, minmax(0, 1fr));
-  gap: var(--space-2);
+  gap: var(--space-1);
   margin-top: var(--space-3);
 }
 
 .rating-option:hover,
-.morning-modal-close:hover {
+.morning-modal-close:hover,
+.rating-clear-button:hover {
   color: var(--color-text);
   background: var(--color-surface-hover);
   border-color: var(--color-accent);

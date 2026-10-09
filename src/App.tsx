@@ -44,6 +44,29 @@ const eveningReflectionFields = [
   { field: 'whatDidILearn', label: 'What did I learn?' },
 ] as const
 
+type SegmentedIndicatorProps = {
+  label: string
+  value: number | undefined
+  maximum?: number
+}
+
+function SegmentedIndicator({ label, value, maximum = 10 }: SegmentedIndicatorProps) {
+  return (
+    <span className="segmented-indicator">
+      <span className="segmented-indicator-value-row">
+        <span className="segmented-indicator-value">{value ?? '—'}</span>
+        <span className="segmented-indicator-context">/{maximum}</span>
+      </span>
+      <span className="segmented-indicator-label">{label}</span>
+      <span className="segmented-indicator-track" aria-hidden="true">
+        {Array.from({ length: maximum }, (_, index) => (
+          <span className={value !== undefined && index < value ? 'segmented-indicator-segment is-active' : 'segmented-indicator-segment'} key={index} />
+        ))}
+      </span>
+    </span>
+  )
+}
+
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'failed'
 
 function App() {
@@ -473,18 +496,9 @@ function App() {
         >
           <span className="morning-card-title">Morning</span>
           <span className="morning-summary">
-            <span className="morning-metric">
-              <span className="morning-metric-value">{morning?.energy ?? '—'}</span>
-              <span className="morning-metric-label">Energy</span>
-            </span>
-            <span className="morning-metric">
-              <span className="morning-metric-value">{morning?.mood ?? '—'}</span>
-              <span className="morning-metric-label">Mood</span>
-            </span>
-            <span className="morning-metric">
-              <span className="morning-metric-value">{morning?.focus ?? '—'}</span>
-              <span className="morning-metric-label">Focus</span>
-            </span>
+            <SegmentedIndicator label="Energy" value={morning?.energy} />
+            <SegmentedIndicator label="Mood" value={morning?.mood} />
+            <SegmentedIndicator label="Focus" value={morning?.focus} />
           </span>
         </button>
 
@@ -496,15 +510,8 @@ function App() {
         >
           <span className="notebook-card-title">Evening Review</span>
           <span className="evening-summary">
-            <span className="evening-rating">
-              <span className="evening-rating-value">{evening?.dayRating ?? '—'}</span>
-              <span className="evening-rating-label">Day rating</span>
-            </span>
-            <span className="evening-reflection-status">
-              {reflectionCount === 0
-                ? 'Not entered'
-                : `${reflectionCount} reflection${reflectionCount === 1 ? '' : 's'}`}
-            </span>
+            <SegmentedIndicator label="Day rating" value={evening?.dayRating} />
+            <SegmentedIndicator label="Reflections" value={reflectionCount} maximum={eveningReflectionFields.length} />
           </span>
         </button>
       </section>
@@ -632,7 +639,7 @@ function App() {
               <legend>Day rating</legend>
               {evening?.dayRating !== undefined && (
                 <button
-                  className="goal-clear-button"
+                  className="rating-clear-button"
                   type="button"
                   onClick={() => updateEveningReview({ dayRating: undefined })}
                 >
