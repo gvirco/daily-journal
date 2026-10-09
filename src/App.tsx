@@ -44,6 +44,8 @@ const eveningReflectionFields = [
   { field: 'whatDidILearn', label: 'What did I learn?' },
 ] as const
 
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'failed'
+
 function App() {
   const [selectedDate, setSelectedDate] = useState(getCurrentLocalDate)
   const [user, setUser] = useState<AuthenticatedUser | null>(null)
@@ -52,7 +54,7 @@ function App() {
   const [journalEntry, setJournalEntry] = useState<DailyJournalEntry | null>(null)
   const [isEntryLoading, setIsEntryLoading] = useState(false)
   const [entryError, setEntryError] = useState<{ date: string; message: string; phase: 'load' | 'save' } | null>(null)
-  const [pendingSaveCount, setPendingSaveCount] = useState(0)
+  const [saveStatus, setSaveStatus] = useState<{ date: string; status: SaveStatus }>({ date: '', status: 'idle' })
   const [reloadNonce, setReloadNonce] = useState(0)
   const [isMorningOpen, setIsMorningOpen] = useState(false)
   const [isNotebookOpen, setIsNotebookOpen] = useState(false)
@@ -60,6 +62,9 @@ function App() {
   const loadSequence = useRef(0)
   const entryRevisions = useRef(new Map<string, number>())
   const saveQueues = useRef(new Map<string, Promise<void>>())
+  const pendingEntries = useRef(new Map<string, { entry: DailyJournalEntry; revision: number }>())
+  const saveTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
+  const journalEntryRef = useRef<DailyJournalEntry | null>(null)
   const today = getCurrentLocalDate()
   const selectedDateValue = toDateInputValue(selectedDate)
   const formattedDate = new Intl.DateTimeFormat('en-GB', {
@@ -105,7 +110,10 @@ function App() {
     getJournalEntry(date, controller.signal)
       .then((entry) => {
         const currentRevision = entryRevisions.current.get(date) ?? 0
-        if (loadSequence.current === requestId && currentRevision === revisionAtRequestStart) setJournalEntry(entry)
+        if (loadSequence.current === requestId && currentRevision === revisionAtRequestStart) {
+          journalEntryRef.current = entry
+          setJournalEntry(entry)
+        }
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted || loadSequence.current !== requestId) return
@@ -122,22 +130,26 @@ function App() {
     return () => controller.abort()
   }, [reloadNonce, selectedDateValue, user])
 
-  function selectDate(date: Date) {
+  async function selectDate(date: Date) {
+    await flushPendingSave(selectedDateValue)
+    journalEntryRef.current = null
     setSelectedDate(date)
     setJournalEntry(null)
     setIsEntryLoading(true)
     setEntryError(null)
+    setSaveStatus({ date: toDateInputValue(date), status: 'idle' })
     setIsMorningOpen(false)
     setIsNotebookOpen(false)
     setIsEveningOpen(false)
   }
 
   function updateMorningRating(field: keyof MorningJournal, rating: Rating10) {
+    const currentEntry = journalEntryRef.current
     const updatedEntry: DailyJournalEntry = {
-      ...(journalEntry ?? { date: selectedDateValue }),
+      ...(currentEntry ?? { date: selectedDateValue }),
       date: selectedDateValue,
       morning: {
-        ...journalEntry?.morning,
+        ...currentEntry?.morning,
         [field]: rating,
       },
     }
@@ -145,13 +157,8 @@ function App() {
     saveEntry(updatedEntry)
   }
 
-  function saveEntry(entry: DailyJournalEntry) {
-    const revision = (entryRevisions.current.get(entry.date) ?? 0) + 1
-    entryRevisions.current.set(entry.date, revision)
-    setEntryError(null)
-    setJournalEntry(entry)
-    setPendingSaveCount((count) => count + 1)
-
+  function queueSave(entry: DailyJournalEntry, revision: number) {
+    let didFail = false
     const previousSave = saveQueues.current.get(entry.date) ?? Promise.resolve()
     const queuedSave = previousSave
       .catch(() => undefined)
@@ -160,23 +167,68 @@ function App() {
 
     queuedSave
       .catch((error: unknown) => {
+        didFail = true
         if (entryRevisions.current.get(entry.date) !== revision) return
         if (error instanceof ApiError && error.status === 401) {
           setUser(null)
           return
         }
         setEntryError({ date: entry.date, message: error instanceof Error ? error.message : 'Unable to save your entry.', phase: 'save' })
+        setSaveStatus({ date: entry.date, status: 'failed' })
       })
       .finally(() => {
-        if (saveQueues.current.get(entry.date) === queuedSave) saveQueues.current.delete(entry.date)
-        setPendingSaveCount((count) => Math.max(0, count - 1))
+        if (saveQueues.current.get(entry.date) !== queuedSave) return
+        saveQueues.current.delete(entry.date)
+        if (!didFail && entryRevisions.current.get(entry.date) === revision && !pendingEntries.current.has(entry.date)) {
+          setSaveStatus({ date: entry.date, status: 'saved' })
+        }
       })
+
+    return queuedSave.catch(() => undefined)
+  }
+
+  function flushPendingSave(date: string) {
+    const timer = saveTimers.current.get(date)
+    if (timer !== undefined) {
+      clearTimeout(timer)
+      saveTimers.current.delete(date)
+    }
+
+    const pendingSave = pendingEntries.current.get(date)
+    if (pendingSave === undefined) return (saveQueues.current.get(date) ?? Promise.resolve()).catch(() => undefined)
+
+    pendingEntries.current.delete(date)
+    return queueSave(pendingSave.entry, pendingSave.revision)
+  }
+
+  function flushPendingSaves() {
+    const dates = new Set([...pendingEntries.current.keys(), ...saveQueues.current.keys()])
+
+    return Promise.all([...dates].map(flushPendingSave)).then(() => undefined)
+  }
+
+  function saveEntry(entry: DailyJournalEntry) {
+    const revision = (entryRevisions.current.get(entry.date) ?? 0) + 1
+    entryRevisions.current.set(entry.date, revision)
+    journalEntryRef.current = entry
+    setEntryError(null)
+    setJournalEntry(entry)
+    setSaveStatus({ date: entry.date, status: 'saving' })
+    pendingEntries.current.set(entry.date, { entry, revision })
+
+    const existingTimer = saveTimers.current.get(entry.date)
+    if (existingTimer !== undefined) clearTimeout(existingTimer)
+    saveTimers.current.set(entry.date, setTimeout(() => {
+      void flushPendingSave(entry.date)
+    }, 700))
   }
 
   async function handleLogout() {
     try {
+      await flushPendingSaves()
       await logout()
     } finally {
+      journalEntryRef.current = null
       setUser(null)
       setJournalEntry(null)
     }
@@ -191,7 +243,8 @@ function App() {
   }
 
   function updateGoalText(index: number, text: string) {
-    const existingGoals = journalEntry?.goals ?? []
+    const currentEntry = journalEntryRef.current
+    const existingGoals = currentEntry?.goals ?? []
     const updatedGoals = Array.from(
       { length: Math.max(existingGoals.length, index + 1) },
       (_, goalIndex) => existingGoals[goalIndex] ?? { text: '', completed: false },
@@ -206,14 +259,15 @@ function App() {
 
     const goals = updatedGoals.some((goal) => goal.text.trim() !== '') ? updatedGoals : undefined
     saveEntry({
-      ...(journalEntry ?? { date: selectedDateValue }),
+      ...(currentEntry ?? { date: selectedDateValue }),
       date: selectedDateValue,
       goals,
     })
   }
 
   function toggleGoalCompleted(index: number) {
-    const goals = [...(journalEntry?.goals ?? [])]
+    const currentEntry = journalEntryRef.current
+    const goals = [...(currentEntry?.goals ?? [])]
     const goal = goals[index]
 
     if (!goal || goal.text.trim() === '') {
@@ -222,28 +276,30 @@ function App() {
 
     goals[index] = { ...goal, completed: !goal.completed }
     saveEntry({
-      ...(journalEntry ?? { date: selectedDateValue }),
+      ...(currentEntry ?? { date: selectedDateValue }),
       date: selectedDateValue,
       goals,
     })
   }
 
   function updateNotes(notes: string) {
+    const currentEntry = journalEntryRef.current
     saveEntry({
-      ...(journalEntry ?? { date: selectedDateValue }),
+      ...(currentEntry ?? { date: selectedDateValue }),
       date: selectedDateValue,
       notes: notes === '' ? undefined : notes,
     })
   }
 
   function updateEveningReview(update: Partial<EveningReview>) {
-    const evening = { ...journalEntry?.evening, ...update }
+    const currentEntry = journalEntryRef.current
+    const evening = { ...currentEntry?.evening, ...update }
     const hasEveningContent = Object.values(evening).some(
       (value) => value !== undefined && value !== '',
     )
 
     saveEntry({
-      ...(journalEntry ?? { date: selectedDateValue }),
+      ...(currentEntry ?? { date: selectedDateValue }),
       date: selectedDateValue,
       evening: hasEveningContent ? evening : undefined,
     })
@@ -293,11 +349,17 @@ function App() {
           <span>Signed in as {user.username}</span>
           <button className="journal-logout" onClick={handleLogout} type="button">Sign out</button>
         </div>
-        {entryError?.date === selectedDateValue && (
-          <p className="journal-sync-status journal-sync-error" role="alert">{entryError.message}</p>
-        )}
-        {entryError?.date !== selectedDateValue && pendingSaveCount > 0 && (
-          <p className="journal-sync-status" aria-live="polite">Saving changes…</p>
+        <span className={`journal-save-status journal-save-status-${saveStatus.date === selectedDateValue ? saveStatus.status : 'idle'}`} aria-live="polite">
+          {saveStatus.date === selectedDateValue && saveStatus.status !== 'idle'
+            ? saveStatus.status === 'saving'
+              ? 'Saving'
+              : saveStatus.status === 'saved'
+                ? 'Saved'
+                : 'Save failed'
+            : ''}
+        </span>
+        {entryError?.date === selectedDateValue && entryError.phase === 'save' && (
+          <p className="journal-sync-error" role="alert">{entryError.message}</p>
         )}
       </header>
 
@@ -328,10 +390,7 @@ function App() {
 
         <section className="goals-card" aria-labelledby="daily-goals-title">
           <div className="goals-card-header">
-            <div>
-              <p className="goals-card-eyebrow">Today</p>
-              <h2 id="daily-goals-title">Daily Goals</h2>
-            </div>
+            <h2 className="notebook-card-title" id="daily-goals-title">Top 3 Priorities</h2>
           </div>
           <ol className="goals-list">
             {Array.from({ length: 3 }, (_, index) => {
@@ -344,36 +403,28 @@ function App() {
                   className={`goal-row ${index === 0 ? 'goal-row-primary' : ''}`}
                   key={position}
                 >
-                  <label className="goal-text-label">
-                    <span>Goal #{position}</span>
+                  <label className="goal-completion-label">
+                    <input
+                      className="goal-completion-checkbox"
+                      type="checkbox"
+                      checked={goal?.completed ?? false}
+                      onChange={() => toggleGoalCompleted(index)}
+                      onBlur={() => void flushPendingSave(selectedDateValue)}
+                      disabled={!isPopulated}
+                      aria-label={`Mark Goal #${position} ${goal?.completed ? 'incomplete' : 'complete'}`}
+                    />
+                    <span className="goal-completion-indicator" aria-hidden="true">✓</span>
+                  </label>
+                  <div className="goal-text-label">
                     <input
                       className="goal-text-input"
                       type="text"
                       value={goal?.text ?? ''}
                       onChange={(event) => updateGoalText(index, event.target.value)}
+                      onBlur={() => void flushPendingSave(selectedDateValue)}
+                      aria-label={`Priority ${position}`}
                       placeholder="Add a goal"
                     />
-                  </label>
-                  <div className="goal-actions">
-                    <button
-                      className="goal-completion-button"
-                      type="button"
-                      onClick={() => toggleGoalCompleted(index)}
-                      aria-pressed={goal?.completed ?? false}
-                      disabled={!isPopulated}
-                    >
-                      {goal?.completed ? 'Completed' : 'Complete'}
-                    </button>
-                    {isPopulated && (
-                      <button
-                        className="goal-clear-button"
-                        type="button"
-                        onClick={() => updateGoalText(index, '')}
-                        aria-label={`Clear Goal #${position}`}
-                      >
-                        Clear
-                      </button>
-                    )}
                   </div>
                 </li>
               )
@@ -517,6 +568,7 @@ function App() {
               id="daily-notes"
               value={notes}
               onChange={(event) => updateNotes(event.target.value)}
+              onBlur={() => void flushPendingSave(selectedDateValue)}
               placeholder="Write anything you want to remember or work through today."
               rows={10}
             />
@@ -588,6 +640,7 @@ function App() {
                   id={field}
                   value={evening?.[field] ?? ''}
                   onChange={(event) => updateEveningReview({ [field]: event.target.value || undefined })}
+                  onBlur={() => void flushPendingSave(selectedDateValue)}
                   rows={3}
                 />
               </div>

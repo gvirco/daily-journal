@@ -106,13 +106,26 @@
   outline-offset: 2px;
 }
 
-.journal-sync-status,
 .journal-loading {
   margin: var(--space-3) 0 0;
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
 
+.journal-save-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  margin-top: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.journal-save-status-saved {
+  color: var(--color-success);
+}
+
+.journal-save-status-failed,
 .journal-sync-error {
   color: var(--color-danger);
 }
@@ -251,28 +264,11 @@
 }
 
 .goals-card-header h2 {
-  margin: var(--space-1) 0 0;
-  color: var(--color-text);
-  font-size: var(--font-size-lg);
-  line-height: 1.2;
-}
-
-.goals-card-eyebrow,
-.goal-text-label > span {
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.goals-card-eyebrow {
   margin: 0;
 }
 
 .goals-list {
   display: grid;
-  gap: var(--space-2);
   margin: var(--space-5) 0 0;
   padding: 0;
   list-style: none;
@@ -280,35 +276,37 @@
 
 .goal-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3);
-  border: var(--border-width) solid var(--color-border-subtle);
-  border-radius: var(--radius-control);
+  padding: var(--space-3) 0;
+  border-bottom: var(--border-width) solid var(--color-border-subtle);
 }
 
 .goal-row-primary {
-  background: var(--color-surface-elevated);
   border-color: var(--color-border);
 }
 
 .goal-text-label {
-  display: grid;
-  gap: var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   min-width: 0;
 }
 
 .goal-text-input {
   width: 100%;
   min-height: var(--control-height);
-  padding: 0 var(--space-3);
+  padding: 0;
   color: var(--color-text);
-  background: var(--color-bg);
-  border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-control);
+  background: transparent;
+  border: 0;
   font: inherit;
   font-size: var(--font-size-md);
+}
+
+.goal-row-primary .goal-text-input {
+  font-weight: 600;
 }
 
 .goal-text-input::placeholder {
@@ -316,49 +314,60 @@
 }
 
 .goal-text-input:focus-visible,
-.goal-completion-button:focus-visible,
-.goal-clear-button:focus-visible {
+.goal-completion-checkbox:focus-visible + .goal-completion-indicator {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
 
-.goal-actions {
-  display: flex;
-  gap: var(--space-2);
+.goal-completion-label {
+  position: relative;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: var(--space-6);
+  min-height: var(--control-height);
+  cursor: pointer;
 }
 
-.goal-completion-button,
-.goal-clear-button {
-  min-height: var(--control-height);
-  padding: 0 var(--space-3);
-  color: var(--color-text-secondary);
+.goal-completion-checkbox {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+}
+
+.goal-completion-indicator {
+  display: grid;
+  place-items: center;
+  width: var(--space-5);
+  height: var(--space-5);
+  color: transparent;
   background: var(--color-surface);
   border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-control);
-  cursor: pointer;
-  font: inherit;
+  border-radius: 50%;
   font-size: var(--font-size-sm);
   font-weight: 600;
   transition: background-color var(--transition-fast), border-color var(--transition-fast),
     color var(--transition-fast);
 }
 
-.goal-completion-button:hover:not(:disabled),
-.goal-clear-button:hover {
-  color: var(--color-text);
+.goal-completion-label:hover .goal-completion-checkbox:not(:disabled) + .goal-completion-indicator {
   background: var(--color-surface-hover);
   border-color: var(--color-accent);
 }
 
-.goal-completion-button[aria-pressed='true'] {
+.goal-completion-checkbox:checked + .goal-completion-indicator {
   color: var(--color-text);
   background: var(--color-success);
   border-color: var(--color-success);
 }
 
-.goal-completion-button:disabled {
-  color: var(--color-text-disabled);
+.goal-completion-checkbox:disabled + .goal-completion-indicator {
   border-color: var(--color-border-subtle);
+}
+
+.goal-completion-checkbox:disabled ~ .goal-completion-indicator,
+.goal-completion-checkbox:disabled {
   cursor: not-allowed;
 }
 
@@ -668,12 +677,4 @@
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
-  .goal-row {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-  }
-
-  .goal-actions {
-    justify-content: flex-end;
-  }
 }
