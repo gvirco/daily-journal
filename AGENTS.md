@@ -26,15 +26,27 @@
   - `DEVELOPMENT_WORKFLOW.md` for development, review, and Git workflow;
   - `README.md` for the repository overview and commands.
 
+
 ## Quality
 
 - Follow `DESIGN_SYSTEM.md` for UI work and reuse its existing tokens.
-- Run relevant verification before finishing. For code changes, normally run:
+- Run relevant verification before finishing.
+- For code changes, always run:
 
   ```bash
   npm run lint
   npm run build
   ```
 
-For relevant changes, also run `npm run test:db`, `npm run test:auth`,
-`npm run test:journal`, and `npm run test:frontend`.
+- Run tests relevant to the changed functionality:
+
+  ```bash
+  npm run test:db
+  npm run test:auth
+  npm run test:journal
+  npm run test:frontend
+  ```
+
+- Before completing a feature PR, run the full verification suite.
+- Perform manual verification of affected user flows.
+- Report failed checks and known limitations; do not claim unverified functionality works.

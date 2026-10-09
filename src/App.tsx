@@ -310,6 +310,22 @@ function App() {
         </div>
       ) : (
       <section className="journal-dashboard" aria-label="Journal entry">
+        <button
+          className="notebook-card"
+          type="button"
+          onClick={() => setIsNotebookOpen(true)}
+          aria-haspopup="dialog"
+        >
+          <span className="notebook-card-title">Daily Notebook</span>
+          <span className="notebook-preview">
+            {notesPreview === null
+              ? 'Not entered'
+              : notesPreview.length > 120
+                ? `${notesPreview.slice(0, 120)}…`
+                : notesPreview}
+          </span>
+        </button>
+
         <section className="goals-card" aria-labelledby="daily-goals-title">
           <div className="goals-card-header">
             <div>
@@ -385,22 +401,6 @@ function App() {
               <span className="morning-metric-value">{morning?.focus ?? '—'}</span>
               <span className="morning-metric-label">Focus</span>
             </span>
-          </span>
-        </button>
-
-        <button
-          className="notebook-card"
-          type="button"
-          onClick={() => setIsNotebookOpen(true)}
-          aria-haspopup="dialog"
-        >
-          <span className="notebook-card-title">Daily Notebook</span>
-          <span className="notebook-preview">
-            {notesPreview === null
-              ? 'Not entered'
-              : notesPreview.length > 120
-                ? `${notesPreview.slice(0, 120)}…`
-                : notesPreview}
           </span>
         </button>
 

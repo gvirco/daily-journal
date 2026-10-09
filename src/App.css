@@ -231,11 +231,12 @@
 
 .journal-dashboard {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 5fr) minmax(220px, 2fr);
-  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 13fr) minmax(260px, 7fr);
+  grid-template-rows: auto auto auto;
   grid-template-areas:
-    'goals notebook morning'
-    'goals notebook evening';
+    'notebook goals'
+    'notebook morning'
+    'notebook evening';
   align-items: stretch;
   gap: var(--space-4);
   padding-top: var(--space-6);
@@ -634,18 +635,14 @@
   border-color: var(--color-accent);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 760px) {
   .journal-dashboard {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: auto;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
-      'notebook notebook'
-      'goals goals'
-      'morning evening';
-  }
-
-  .notebook-card:not(.evening-card) {
-    min-height: 180px;
+      'notebook'
+      'goals'
+      'morning'
+      'evening';
   }
 }
 
@@ -669,19 +666,6 @@
 
   .rating-options {
     grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-
-  .goals-card {
-    grid-area: goals;
-  }
-
-  .journal-dashboard {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      'notebook'
-      'goals'
-      'morning'
-      'evening';
   }
 
   .goal-row {
