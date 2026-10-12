@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
   DailyGoal,
   DailyJournalEntry,
@@ -13,6 +13,7 @@ import {
   getCurrentUser,
   getJournalEntry,
   logout,
+  onAuthStateChange,
   saveJournalEntry,
   type AuthenticatedUser,
 } from './services/journalApi'
@@ -88,6 +89,8 @@ function App() {
   const pendingEntries = useRef(new Map<string, { entry: DailyJournalEntry; revision: number }>())
   const saveTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
   const journalEntryRef = useRef<DailyJournalEntry | null>(null)
+  const activeUserId = useRef<string | null>(null)
+  const sessionGeneration = useRef(0)
   const notebookTriggerRef = useRef<HTMLButtonElement>(null)
   const notebookCloseRef = useRef<HTMLButtonElement>(null)
   const notebookTextareaRef = useRef<HTMLTextAreaElement>(null)
@@ -101,12 +104,38 @@ function App() {
   }).format(selectedDate)
   const isToday = selectedDateValue === toDateInputValue(today)
 
+  const applyAuthenticatedUser = useCallback((nextUser: AuthenticatedUser | null) => {
+    if (activeUserId.current !== nextUser?.id) {
+      activeUserId.current = nextUser?.id ?? null
+      sessionGeneration.current += 1
+      loadSequence.current += 1
+      saveTimers.current.forEach(clearTimeout)
+      saveTimers.current.clear()
+      pendingEntries.current.clear()
+      saveQueues.current.clear()
+      entryRevisions.current.clear()
+      journalEntryRef.current = null
+      setJournalEntry(null)
+      setIsEntryLoading(false)
+      setEntryError(null)
+      setSaveStatus({ date: '', status: 'idle' })
+      setIsMorningOpen(false)
+      setIsNotebookOpen(false)
+      setIsEveningOpen(false)
+    }
+    setUser(nextUser)
+  }, [])
+
   useEffect(() => {
     let isCurrent = true
 
+    const unsubscribe = onAuthStateChange((nextUser) => {
+      if (isCurrent) applyAuthenticatedUser(nextUser)
+    })
+
     getCurrentUser()
       .then((restoredUser) => {
-        if (isCurrent) setUser(restoredUser)
+        if (isCurrent) applyAuthenticatedUser(restoredUser)
       })
       .catch((error: unknown) => {
         if (isCurrent) setAuthError(error instanceof Error ? error.message : 'Unable to restore your session.')
@@ -115,8 +144,11 @@ function App() {
         if (isCurrent) setIsAuthLoading(false)
       })
 
-    return () => { isCurrent = false }
-  }, [])
+    return () => {
+      isCurrent = false
+      unsubscribe()
+    }
+  }, [applyAuthenticatedUser])
 
   useEffect(() => {
     if (user === null) return
@@ -144,7 +176,7 @@ function App() {
       .catch((error: unknown) => {
         if (controller.signal.aborted || loadSequence.current !== requestId) return
         if (error instanceof ApiError && error.status === 401) {
-          setUser(null)
+          applyAuthenticatedUser(null)
           return
         }
         setEntryError({ date, message: error instanceof Error ? error.message : 'Unable to load this entry.', phase: 'load' })
@@ -154,7 +186,7 @@ function App() {
       })
 
     return () => controller.abort()
-  }, [reloadNonce, selectedDateValue, user])
+  }, [applyAuthenticatedUser, reloadNonce, selectedDateValue, user])
 
   async function selectDate(date: Date) {
     await flushPendingSave(selectedDateValue)
@@ -184,25 +216,32 @@ function App() {
   }
 
   function queueSave(entry: DailyJournalEntry, revision: number) {
+    const saveSessionGeneration = sessionGeneration.current
+    const saveUserId = activeUserId.current
     let didFail = false
     const previousSave = saveQueues.current.get(entry.date) ?? Promise.resolve()
     const queuedSave = previousSave
       .catch(() => undefined)
-      .then(() => saveJournalEntry(entry))
+      .then(() => {
+        if (saveSessionGeneration !== sessionGeneration.current) return
+        return saveJournalEntry(entry, saveUserId ?? undefined)
+      })
     saveQueues.current.set(entry.date, queuedSave)
 
     queuedSave
       .catch((error: unknown) => {
         didFail = true
+        if (saveSessionGeneration !== sessionGeneration.current) return
         if (entryRevisions.current.get(entry.date) !== revision) return
         if (error instanceof ApiError && error.status === 401) {
-          setUser(null)
+          applyAuthenticatedUser(null)
           return
         }
         setEntryError({ date: entry.date, message: error instanceof Error ? error.message : 'Unable to save your entry.', phase: 'save' })
         setSaveStatus({ date: entry.date, status: 'failed' })
       })
       .finally(() => {
+        if (saveSessionGeneration !== sessionGeneration.current) return
         if (saveQueues.current.get(entry.date) !== queuedSave) return
         saveQueues.current.delete(entry.date)
         if (!didFail && entryRevisions.current.get(entry.date) === revision && !pendingEntries.current.has(entry.date)) {
@@ -254,9 +293,7 @@ function App() {
       await flushPendingSaves()
       await logout()
     } finally {
-      journalEntryRef.current = null
-      setUser(null)
-      setJournalEntry(null)
+      applyAuthenticatedUser(null)
     }
   }
 
@@ -286,7 +323,7 @@ function App() {
   }
 
   if (user === null) {
-    return <AuthScreen initialError={authError} onAuthenticated={setUser} />
+    return <AuthScreen initialError={authError} onAuthenticated={applyAuthenticatedUser} />
   }
 
   function updateGoalText(index: number, text: string) {
@@ -408,7 +445,7 @@ function App() {
               {saveStatusLabel}
             </span>
             <div className="journal-account">
-              <span>Signed in as {user.username}</span>
+              <span>Signed in as {user.email}</span>
               <button className="journal-logout" onClick={handleLogout} type="button">Sign out</button>
             </div>
           </div>
