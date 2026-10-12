@@ -1,3 +1,4 @@
+
 # Daily Journal
 
 Daily Journal is a browser-based journal for daily reflection, priorities, and execution, with authenticated per-user data stored in a local SQLite database.
@@ -9,8 +10,8 @@ Evening Review, username/password registration and login, logout, persistent
 sessions, and per-user journal autosave to SQLite. Database, authentication,
 journal API, and API-client tests are available.
 
-Remaining planned work: JSON/CSV export and JSON import, CI, and deployment.
-This application currently uses a local database, not cloud storage.
+Remaining planned work: JSON/CSV export and JSON import, cloud persistence,
+CI, and deployment.
 
 ## Technology
 
@@ -18,9 +19,41 @@ This application currently uses a local database, not cloud storage.
 - TypeScript
 - Vite
 - ESLint
-- Express REST API and SQLite (local per-user persistence)
+- Express REST API and SQLite (current local persistence)
 - Argon2id password hashing and cookie-based sessions
+- Supabase CLI (development tooling; application integration pending)
 - Legacy browser `localStorage` (retained, not used for active journal storage)
+
+## Supabase setup
+
+**Status: CLI initialized and linked; application integration pending.**
+
+Completed on 2026-10-12:
+
+- Installed Supabase CLI as a development dependency.
+- Initialized local Supabase configuration using `npx supabase init`.
+- Authenticated with Supabase CLI using `npx supabase login`.
+- Linked the local repository to the remote Supabase project.
+
+Remote project reference: `noztttstdmampjazrmcs`
+
+Supabase dashboard:
+https://supabase.com/dashboard/project/noztttstdmampjazrmcs
+
+The Supabase CLI configuration lives in `supabase/config.toml`.
+The CLI maintains local project-link state separately.
+
+**Important:** Linking the CLI does not connect the application to
+Supabase. The existing Express API, authentication, and SQLite
+persistence remain unchanged.
+
+Before public deployment, the application still requires an agreed
+production architecture, database and authentication integration,
+environment configuration, security verification, and automated
+deployment.
+
+Do not commit credentials, access tokens, `.env` files, or
+Supabase temporary local state.
 
 ## Run and verify
 
