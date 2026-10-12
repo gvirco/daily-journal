@@ -10,12 +10,13 @@
 
 ## Architecture
 
-- Daily Journal uses a React/TypeScript frontend and a local Express API backed by persistent SQLite. Do not add cloud services or external integrations without an explicit request.
+- Daily Journal uses a React/TypeScript frontend with Supabase Auth and a Supabase PostgreSQL database. Do not add services or external integrations without an explicit request.
+- Production deployment is a static Vite build on Vercel; `npm run build` outputs `dist`.
 - A `DailyJournalEntry` represents exactly one local calendar date, formatted `YYYY-MM-DD`, for one authenticated user.
-- UI components must access journal data through `src/services/journalApi.ts`, not directly through storage or `localStorage`.
-- The API derives the user identity from the server-side session, never a client-supplied user ID. Keep every journal operation scoped to the authenticated user.
+- UI components must access journal data through `src/services/journalApi.ts`, not directly through Supabase or `localStorage`.
+- Journal operations use the authenticated Supabase user's UUID and must remain protected by database RLS.
 - Preserve the existing legacy `localStorage` data. Do not migrate it or use it as a fallback unless explicitly requested.
-- Do not store plaintext passwords, expose session tokens to JavaScript, or commit runtime SQLite files or secrets.
+- Do not store passwords, use Supabase service-role or secret keys in the frontend, or commit Vercel local state, Supabase temporary files, runtime SQLite files, `.env` files, or secrets.
 
 ## Documentation
 
@@ -38,14 +39,7 @@
   npm run build
   ```
 
-- Run tests relevant to the changed functionality:
-
-  ```bash
-  npm run test:db
-  npm run test:auth
-  npm run test:journal
-  npm run test:frontend
-  ```
+- Run tests relevant to the changed functionality when they exist.
 
 - Before completing a feature PR, run the full verification suite.
 - Perform manual verification of affected user flows.

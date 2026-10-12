@@ -15,12 +15,19 @@ dist-ssr
 .env.*
 !.env.example
 
-# API runtime data
+# Legacy runtime data
 data/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
 *.tsbuildinfo
+
+# Vercel local project state
+.vercel/
+
+# Supabase local CLI state
+supabase/.branches/
+supabase/.temp/
 
 # Editor directories and files
 .vscode/*

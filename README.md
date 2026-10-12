@@ -1,135 +1,46 @@
-
 # Daily Journal
 
-Daily Journal is a browser-based journal for daily reflection, priorities, and execution, with authenticated per-user data stored in a local SQLite database.
+Daily Journal is a React and TypeScript journal for daily reflection, priorities, and execution. Authentication and per-user entries are provided by Supabase.
 
-## Current implementation
+## Setup
 
-Implemented: date navigation, Morning check-in, Daily Goals, Daily Notebook,
-Evening Review, username/password registration and login, logout, persistent
-sessions, and per-user journal autosave to SQLite. Database, authentication,
-journal API, and API-client tests are available.
-
-Remaining planned work: JSON/CSV export and JSON import, cloud persistence,
-CI, and deployment.
-
-## Technology
-
-- React
-- TypeScript
-- Vite
-- ESLint
-- Express REST API and SQLite (current local persistence)
-- Argon2id password hashing and cookie-based sessions
-- Supabase CLI (development tooling; application integration pending)
-- Legacy browser `localStorage` (retained, not used for active journal storage)
-
-## Supabase setup
-
-**Status: CLI initialized and linked; application integration pending.**
-
-Completed on 2026-10-12:
-
-- Installed Supabase CLI as a development dependency.
-- Initialized local Supabase configuration using `npx supabase init`.
-- Authenticated with Supabase CLI using `npx supabase login`.
-- Linked the local repository to the remote Supabase project.
-
-Remote project reference: `noztttstdmampjazrmcs`
-
-Supabase dashboard:
-https://supabase.com/dashboard/project/noztttstdmampjazrmcs
-
-The Supabase CLI configuration lives in `supabase/config.toml`.
-The CLI maintains local project-link state separately.
-
-**Important:** Linking the CLI does not connect the application to
-Supabase. The existing Express API, authentication, and SQLite
-persistence remain unchanged.
-
-Before public deployment, the application still requires an agreed
-production architecture, database and authentication integration,
-environment configuration, security verification, and automated
-deployment.
-
-Do not commit credentials, access tokens, `.env` files, or
-Supabase temporary local state.
-
-## Run and verify
+1. Copy `.env.example` to `.env.local`.
+2. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` from the Supabase project dashboard. Use only the publishable key in the browser.
+3. Install dependencies and start Vite:
 
 ```bash
 npm install
-npm run dev:api
-```
-
-In a second terminal, start the Vite frontend:
-
-```bash
 npm run dev
 ```
 
-The API listens on `http://localhost:3001` by default. Confirm it is running
-with `GET /health`. The SQLite database is created at
-`data/daily-journal.sqlite` by default. Set `DATABASE_PATH` or `PORT` in your
-shell to override either value. Runtime databases and `.env` files are ignored
-by Git. Vite proxies `/api` requests to `http://localhost:3001`, so browser
-sessions use the same origin during local development.
+The Supabase project must have the `journal_entries` migration applied and email confirmation disabled for immediate email/password registration.
 
-Open the Vite URL shown in the terminal, register an account, then use the
-journal normally. Existing browser `localStorage` entries remain untouched and
-are not imported into the authenticated API.
+## Vercel deployment
 
-## API authentication
+Import the GitHub repository into Vercel and keep `main` as the production branch. Vercel detects Vite and uses `npm run build`, which produces `dist`; no `vercel.json` is required for the current single-page application.
 
-The API supports username/password registration and login. Passwords are stored
-as Argon2id hashes; session tokens are stored server-side in SQLite and sent in
-`HttpOnly`, `SameSite=Lax` cookies. Cookies use the `Secure` attribute for HTTPS
-requests.
+In Vercel, set these environment variables for both Preview and Production deployments:
 
-- `POST /api/auth/register` with `{ "username", "password" }` creates an account and signs it in.
-- `POST /api/auth/login` with `{ "username", "password" }` creates a session.
-- `POST /api/auth/logout` ends the current session.
-- `GET /api/auth/me` returns the signed-in user or `401`.
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
 
-Usernames must be 3-32 characters using letters, digits, `_`, or `-`.
-Passwords must be 8-128 characters. Existing API-foundation databases are
-migrated in place: existing users and journal entries are retained, and old
-email values are preserved as legacy data. Legacy users have no password
-credentials.
+Use the same deployment URL as the Supabase Auth Site URL, and add it to Supabase Auth Redirect URLs where applicable. Never add service-role or secret keys to Vercel frontend variables.
 
-## Journal API
-
-Journal endpoints require the authentication session cookie. The user identity is
-always derived from that session, not from the request body.
-
-- `GET /api/entries/:date` returns that user's entry for a real `YYYY-MM-DD` date, or `404`.
-- `PUT /api/entries/:date` creates or completely replaces that user's entry.
-
-The `PUT` body is a `DailyJournalEntry` whose `date` must exactly match `:date`.
-Sections are optional, so partially completed entries are valid. Ratings must be
-integers from 1 through 10; goals require a string `text` and boolean
-`completed`; and the API rejects fields outside the domain model.
+## Verification
 
 ```bash
 npm run lint
 npm run build
-npm run test:db
-npm run test:auth
-npm run test:journal
-npm run test:frontend
 ```
 
 ## Data retention
 
-The local database file (`data/daily-journal.sqlite` by default) persists across
-API restarts but is not automatically backed up. It is ignored by Git and is
-not included in pushes or PRs. Back it up separately before relying on it for
-long-term personal data. Old browser `localStorage` entries are preserved but
-are not automatically migrated to registered users.
+Supabase Auth manages persistent browser sessions. Journal entries are stored in `public.journal_entries` and are isolated by row-level security. Legacy browser `localStorage` data and local SQLite files are preserved but are not used or migrated.
 
-## Documentation
+## Supabase CLI
 
-- `AGENTS.md` — coding-agent contract and architecture constraints.
-- `PRODUCT_SPEC.md` — MVP product scope and acceptance criteria.
-- `DESIGN_SYSTEM.md` — durable UI guidance and canonical tokens.
-- `DEVELOPMENT_WORKFLOW.md` — feature, review, Git, and PR checklist.
+The repository is linked to the Supabase project and contains migrations under `supabase/migrations/`. Apply pending migrations intentionally with:
+
+```bash
+npx supabase db push
+```

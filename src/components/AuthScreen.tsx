@@ -9,7 +9,7 @@ type AuthScreenProps = {
 
 export function AuthScreen({ initialError, onAuthenticated }: AuthScreenProps) {
   const [mode, setMode] = useState<'login' | 'register'>('login')
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(initialError)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -20,7 +20,7 @@ export function AuthScreen({ initialError, onAuthenticated }: AuthScreenProps) {
     setIsSubmitting(true)
 
     try {
-      const user = mode === 'login' ? await login(username, password) : await register(username, password)
+      const user = mode === 'login' ? await login(email, password) : await register(email, password)
       onAuthenticated(user)
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Unable to sign in.')
@@ -34,19 +34,18 @@ export function AuthScreen({ initialError, onAuthenticated }: AuthScreenProps) {
       <section className="auth-card" aria-labelledby="auth-title">
         <p className="auth-eyebrow">Daily Journal</p>
         <h1 id="auth-title">{mode === 'login' ? 'Welcome back' : 'Create your journal'}</h1>
-        <p className="auth-copy">{mode === 'login' ? 'Sign in to continue your daily practice.' : 'Start with a username and password.'}</p>
+        <p className="auth-copy">{mode === 'login' ? 'Sign in to continue your daily practice.' : 'Start with your email and password.'}</p>
 
         <form className="auth-form" onSubmit={submit}>
-          <label className="auth-label" htmlFor="username">Username</label>
+          <label className="auth-label" htmlFor="email">Email</label>
           <input
-            autoComplete="username"
+            autoComplete="email"
             className="auth-input"
-            id="username"
-            maxLength={32}
-            minLength={3}
-            onChange={(event) => setUsername(event.target.value)}
+            id="email"
+            onChange={(event) => setEmail(event.target.value)}
             required
-            value={username}
+            type="email"
+            value={email}
           />
           <label className="auth-label" htmlFor="password">Password</label>
           <input

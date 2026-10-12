@@ -6,7 +6,7 @@ Daily Journal is a browser-based daily reflection and execution journal. It help
 
 ## MVP scope
 
-The original MVP was browser-based and local-first, with one journal entry per local calendar date (`YYYY-MM-DD`). The current implementation extends it with username/password accounts and an Express API backed by local SQLite. Cloud hosting and external integrations remain out of scope.
+The original MVP was browser-based and local-first, with one journal entry per local calendar date (`YYYY-MM-DD`). The current implementation uses Supabase email/password accounts and Supabase PostgreSQL storage.
 
 An entry may be partially completed and contains the following optional sections:
 
@@ -17,11 +17,11 @@ An entry may be partially completed and contains the following optional sections
 
 ## Multi-user extension (implemented)
 
-- A user can register with a unique username and password, log in, log out, and restore an existing session after refresh.
-- Journal API requests require authentication; entries are private to the authenticated user.
+- A user can register with email and password, log in, log out, and restore an existing session after refresh.
+- Journal requests require authentication; entries are private to the authenticated user through row-level security.
 - Each user has at most one entry for each local date. Different users can use the same date independently.
-- Entries are saved in a local SQLite database that survives browser and application restarts while the database file is retained.
-- Existing browser `localStorage` entries are not automatically migrated and are not used as an API fallback.
+- Entries are saved in Supabase PostgreSQL and remain available after browser refresh.
+- Existing browser `localStorage` entries and local SQLite files are not automatically migrated and are not used as a fallback.
 
 ## Date navigation
 
@@ -49,7 +49,7 @@ Evening Review records a 1–10 Day rating plus responses to:
 
 ## Persistence and data transfer
 
-Changes autosave without a manual Save button through the authenticated API to SQLite. Entries remain available after browser refresh and API restart. The database is local to the computer; cloud sync and automatic backups are not implemented.
+Changes autosave without a manual Save button through Supabase. Entries remain available after browser refresh and are isolated per authenticated user.
 
 The original MVP also requires the following data-transfer features, which remain planned:
 
@@ -65,7 +65,7 @@ MVP 1.0 does not include:
 - food, coffee, training, detailed work tracking, or activity logs;
 - energy tracking beyond Morning Energy;
 - separate learning, personal-progress, or sleep-preparation sections;
-- cloud hosting, cloud storage, third-party identity providers, or external integrations;
+- third-party identity providers or external integrations beyond Supabase;
 - analytics, graphs, correlations, reminders, notifications, social features, or a native mobile application.
 
 ## MVP acceptance criteria
@@ -77,7 +77,7 @@ MVP 1.0 is complete when:
 3. The user can create, order, and complete up to three daily goals.
 4. The user can write one free-form Daily Notebook entry.
 5. The user can complete Evening Review, including its rating and three reflection prompts.
-6. Authenticated entries autosave to SQLite, remain available after refresh and backend restart, and are separate for each user and date.
+6. Authenticated entries autosave to Supabase, remain available after refresh, and are separate for each user and date.
 7. All journal data can be exported as JSON and CSV, and imported from JSON.
 8. The application is usable on desktop and mobile screens.
 9. Users can register, log in, restore sessions, and log out; journal entries are inaccessible to other users.

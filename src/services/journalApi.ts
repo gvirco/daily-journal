@@ -1,82 +1,96 @@
+import type { User } from '@supabase/supabase-js'
 import type { DailyJournalEntry } from '../domain/DailyJournalEntry'
+import { getSupabaseClient, type Json } from './supabase'
 
 export type AuthenticatedUser = {
-  id: number
-  username: string
-}
-
-type UserResponse = {
-  user: AuthenticatedUser
+  id: string
+  email: string
 }
 
 export class ApiError extends Error {
-  readonly status: number
+  readonly status: number | undefined
 
-  constructor(
-    message: string,
-    status: number,
-  ) {
+  constructor(message: string, status?: number) {
     super(message)
     this.status = status
   }
 }
 
-async function request(path: string, options: RequestInit = {}): Promise<Response> {
-  const response = await fetch(path, { credentials: 'include', ...options })
-  if (!response.ok) {
-    const body = await response.json().catch(() => null) as { error?: string } | null
-    throw new ApiError(body?.error ?? 'The request could not be completed.', response.status)
-  }
+function toAuthenticatedUser(user: User): AuthenticatedUser {
+  return { email: user.email ?? '', id: user.id }
+}
 
-  return response
+function toApiError(error: { message: string; status?: number }): ApiError {
+  return new ApiError(error.message, error.status)
+}
+
+async function requireCurrentUser(): Promise<AuthenticatedUser> {
+  const user = await getCurrentUser()
+  if (user === null) throw new ApiError('You must be signed in to access journal entries.', 401)
+  return user
 }
 
 export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
-  try {
-    const response = await request('/api/auth/me')
-    return (await response.json() as UserResponse).user
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 401) return null
-    throw error
-  }
+  const { data, error } = await getSupabaseClient().auth.getSession()
+  if (error !== null) throw toApiError(error)
+
+  return data.session === null ? null : toAuthenticatedUser(data.session.user)
 }
 
-export async function register(username: string, password: string): Promise<AuthenticatedUser> {
-  const response = await request('/api/auth/register', {
-    body: JSON.stringify({ password, username }),
-    headers: { 'content-type': 'application/json' },
-    method: 'POST',
-  })
-  return (await response.json() as UserResponse).user
+export async function register(email: string, password: string): Promise<AuthenticatedUser> {
+  const { data, error } = await getSupabaseClient().auth.signUp({ email, password })
+  if (error !== null) throw toApiError(error)
+  if (data.user === null) throw new ApiError('Unable to create your account.')
+
+  return toAuthenticatedUser(data.user)
 }
 
-export async function login(username: string, password: string): Promise<AuthenticatedUser> {
-  const response = await request('/api/auth/login', {
-    body: JSON.stringify({ password, username }),
-    headers: { 'content-type': 'application/json' },
-    method: 'POST',
-  })
-  return (await response.json() as UserResponse).user
+export async function login(email: string, password: string): Promise<AuthenticatedUser> {
+  const { data, error } = await getSupabaseClient().auth.signInWithPassword({ email, password })
+  if (error !== null) throw toApiError(error)
+  if (data.user === null) throw new ApiError('Unable to sign in.')
+
+  return toAuthenticatedUser(data.user)
 }
 
 export async function logout(): Promise<void> {
-  await request('/api/auth/logout', { method: 'POST' })
+  const { error } = await getSupabaseClient().auth.signOut()
+  if (error !== null) throw toApiError(error)
+}
+
+export function onAuthStateChange(callback: (user: AuthenticatedUser | null) => void): () => void {
+  const { data } = getSupabaseClient().auth.onAuthStateChange((_event, session) => {
+    callback(session === null ? null : toAuthenticatedUser(session.user))
+  })
+
+  return () => data.subscription.unsubscribe()
 }
 
 export async function getJournalEntry(date: string, signal?: AbortSignal): Promise<DailyJournalEntry | null> {
-  try {
-    const response = await request(`/api/entries/${date}`, { signal })
-    return await response.json() as DailyJournalEntry
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 404) return null
-    throw error
-  }
+  const user = await requireCurrentUser()
+  const { data, error } = await getSupabaseClient()
+    .from('journal_entries')
+    .select('content')
+    .eq('user_id', user.id)
+    .eq('entry_date', date)
+    .abortSignal(signal ?? new AbortController().signal)
+    .maybeSingle()
+
+  if (error !== null) throw toApiError(error)
+  return data === null ? null : data.content as unknown as DailyJournalEntry
 }
 
-export async function saveJournalEntry(entry: DailyJournalEntry): Promise<void> {
-  await request(`/api/entries/${entry.date}`, {
-    body: JSON.stringify(entry),
-    headers: { 'content-type': 'application/json' },
-    method: 'PUT',
-  })
+export async function saveJournalEntry(entry: DailyJournalEntry, expectedUserId?: string): Promise<void> {
+  const user = await requireCurrentUser()
+  if (expectedUserId !== undefined && user.id !== expectedUserId) {
+    throw new ApiError('Your session changed before this entry could be saved.', 401)
+  }
+  const { error } = await getSupabaseClient()
+    .from('journal_entries')
+    .upsert(
+      { content: entry as unknown as Json, entry_date: entry.date, user_id: user.id },
+      { onConflict: 'user_id,entry_date' },
+    )
+
+  if (error !== null) throw toApiError(error)
 }
