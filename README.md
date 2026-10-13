@@ -2,6 +2,20 @@
 
 Daily Journal is a React and TypeScript journal for daily reflection, priorities, and execution. Authentication and per-user entries are provided by Supabase.
 
+## Feature status
+
+Implemented: email/password authentication, per-user Supabase entries, date navigation, morning ratings, three priorities, a daily notebook, evening review, and autosave. JSON/CSV export and JSON import are P1 future scope; they are not implemented.
+
+## Documentation
+
+- [Product idea](docs/PRODUCT_IDEA.md)
+- [MVP priorities and acceptance criteria](docs/MVP.md)
+- [Database model](docs/DATA_MODEL.md)
+- [Current architecture](docs/ARCHITECTURE.md)
+- [Implementation history](docs/IMPLEMENTATION_HISTORY.md)
+- [Product specification](PRODUCT_SPEC.md)
+- [Development workflow](DEVELOPMENT_WORKFLOW.md)
+
 ## Setup
 
 1. Copy `.env.example` to `.env.local`.
