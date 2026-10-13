@@ -21,6 +21,7 @@ An entry may be partially completed and contains the following optional sections
 - Journal requests require authentication; entries are private to the authenticated user through row-level security.
 - Each user has at most one entry for each local date. Different users can use the same date independently.
 - Entries are saved in Supabase PostgreSQL and remain available after browser refresh.
+- A user can permanently delete the selected day's entry after explicit confirmation.
 - Existing browser `localStorage` entries and local SQLite files are not automatically migrated and are not used as a fallback.
 
 #### Date navigation
@@ -81,7 +82,8 @@ MVP 1.0 is complete when:
 5. The user can complete Evening Review, including its rating and three reflection prompts.
 6. Authenticated entries autosave to Supabase, remain available after refresh, and are separate for each user and date.
 7. The application is usable on desktop and mobile screens.
-8. Users can register, log in, restore sessions, and log out; journal entries are inaccessible to other users.
+8. Users can delete the selected day's entry only after confirmation; the selected date then appears empty without changing another date.
+9. Users can register, log in, restore sessions, and log out; journal entries are inaccessible to other users.
 
 ## P1 acceptance criteria
 

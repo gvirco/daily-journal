@@ -4,7 +4,7 @@ Daily Journal is a React and TypeScript journal for daily reflection, priorities
 
 ## Feature status
 
-Implemented: email/password authentication, per-user Supabase entries, date navigation, morning ratings, three priorities, a daily notebook, evening review, and autosave. JSON/CSV export and JSON import are P1 future scope; they are not implemented.
+Implemented: email/password authentication, per-user Supabase entries, date navigation, morning ratings, three priorities, a daily notebook, evening review, autosave, and confirmed deletion of the selected entry. JSON/CSV export and JSON import are P1 future scope; they are not implemented.
 
 ## Documentation
 
@@ -13,6 +13,10 @@ Implemented: email/password authentication, per-user Supabase entries, date navi
 - [Database model](docs/DATA_MODEL.md)
 - [Current architecture](docs/ARCHITECTURE.md)
 - [Implementation history](docs/IMPLEMENTATION_HISTORY.md)
+- [Test report and lecturer checklist](docs/TEST_REPORT.md)
+- [Supabase RLS verification procedure](docs/SECURITY_VERIFICATION.md)
+- [Assessment demo script](docs/DEMO.md)
+- [Required submission screenshots](docs/screenshots/README.md)
 - [Product specification](PRODUCT_SPEC.md)
 - [Development workflow](DEVELOPMENT_WORKFLOW.md)
 
@@ -45,7 +49,14 @@ Use the same deployment URL as the Supabase Auth Site URL, and add it to Supabas
 ```bash
 npm run lint
 npm run build
+npm run test
 ```
+
+`npm run test` runs mocked Vitest tests and does not require Supabase credentials. See the [test report](docs/TEST_REPORT.md) for coverage and manual checks that still need evidence.
+
+## Production application
+
+Production URL: **PENDING — add the confirmed Vercel production URL before submission.** The repository contains no deployment URL or Vercel project metadata, so one is not inferred here.
 
 ## Data retention
 

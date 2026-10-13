@@ -13,7 +13,7 @@ After signing in with email and password, a person can open today or navigate to
 - One free-form Daily Notebook note.
 - An Evening Review with a 1–10 day rating and three reflection prompts.
 
-Changes autosave to Supabase. The dashboard shows a concise summary and opens the Morning, Notebook, and Evening areas in dialogs. Authentication, entries, and persistence are implemented; JSON/CSV export and JSON import are not.
+Changes autosave to Supabase. A user can permanently delete the selected day's entry after confirmation. The dashboard shows a concise summary and opens the Morning, Notebook, and Evening areas in dialogs. Authentication, entries, and persistence are implemented; JSON/CSV export and JSON import are not.
 
 ## Boundaries
 

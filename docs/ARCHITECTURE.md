@@ -18,7 +18,7 @@ flowchart LR
 - `src/App.tsx` contains the authenticated journal screen, date navigation, dialogs, entry loading, and autosave coordination.
 - `src/components/AuthScreen.tsx` provides registration and login UI.
 - `src/domain/DailyJournalEntry.ts` defines the entry, ratings, goals, morning, and evening TypeScript shapes.
-- `src/services/journalApi.ts` is the UI's journal-data boundary. It reads the current session, calls Supabase Auth, loads an entry, and upserts an entry.
+- `src/services/journalApi.ts` is the UI's journal-data boundary. It reads the current session, calls Supabase Auth, loads, upserts, and deletes an entry.
 - `src/services/supabase.ts` creates the typed Supabase browser client from `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`.
 
 The legacy `src/services/journalStorage.ts` reads and writes browser `localStorage`, but the current UI does not import it. It is retained without migration or fallback behavior.
@@ -32,6 +32,8 @@ The app restores the Supabase session on startup and subscribes to auth-state ch
 When the signed-in user or selected date changes, the app loads that date's row. An `AbortController` and increasing request sequence prevent stale loads from replacing newer state.
 
 Edits update React state immediately. They are debounced for 700 ms, coalesced to the latest snapshot per date, and serialized per date. Each revision is checked before the UI reports Saved, so an older request cannot overwrite a newer pending edit in the client flow. Pending saves are flushed on sign-out, notebook close, and relevant field blur events.
+
+Before deletion, the UI blocks conflicting edits, date changes, and sign-out; flushes queued and in-flight writes for the selected date; then deletes that authenticated user's row. It clears the screen only after deletion succeeds, invalidating stale loads and save revisions so an older client request cannot restore the deleted entry.
 
 ## Deployment and configuration
 

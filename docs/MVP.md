@@ -12,6 +12,7 @@ Daily Journal is an individual daily planning and reflection tool. The current p
 - One free-form Daily Notebook field.
 - Evening day rating and the three prompts: What worked?, What didn't?, and What did I learn?
 - Debounced autosave to Supabase and reload of saved entries after navigation or refresh.
+- Permanent deletion of the selected date's entry after explicit confirmation.
 - Responsive React UI for the journal areas.
 
 ## P0 acceptance criteria
@@ -24,8 +25,9 @@ P0 is accepted when a signed-in user can:
 4. Write and revisit one daily notebook entry.
 5. complete the Evening Review rating and prompts.
 6. see changes autosaved, survive a page refresh, and remain separate from another user's entries.
-7. register, log in, restore a session, and log out, while database row-level security prevents access to another user's entries.
-8. use the journal at desktop and mobile viewport sizes.
+7. delete the selected entry after confirmation without changing another date.
+8. register, log in, restore a session, and log out, while database row-level security prevents access to another user's entries.
+9. use the journal at desktop and mobile viewport sizes.
 
 ## P1 — future scope
 
