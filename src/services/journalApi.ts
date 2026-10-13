@@ -94,3 +94,18 @@ export async function saveJournalEntry(entry: DailyJournalEntry, expectedUserId?
 
   if (error !== null) throw toApiError(error)
 }
+
+export async function deleteJournalEntry(date: string, expectedUserId?: string): Promise<void> {
+  const user = await requireCurrentUser()
+  if (expectedUserId !== undefined && user.id !== expectedUserId) {
+    throw new ApiError('Your session changed before this entry could be deleted.', 401)
+  }
+
+  const { error } = await getSupabaseClient()
+    .from('journal_entries')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('entry_date', date)
+
+  if (error !== null) throw toApiError(error)
+}

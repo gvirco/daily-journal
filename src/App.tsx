@@ -10,6 +10,7 @@ import './App.css'
 import { AuthScreen } from './components/AuthScreen'
 import {
   ApiError,
+  deleteJournalEntry,
   getCurrentUser,
   getJournalEntry,
   logout,
@@ -77,12 +78,14 @@ function App() {
   const [authError, setAuthError] = useState<string | null>(null)
   const [journalEntry, setJournalEntry] = useState<DailyJournalEntry | null>(null)
   const [isEntryLoading, setIsEntryLoading] = useState(false)
-  const [entryError, setEntryError] = useState<{ date: string; message: string; phase: 'load' | 'save' } | null>(null)
+  const [entryError, setEntryError] = useState<{ date: string; message: string; phase: 'load' | 'save' | 'delete' } | null>(null)
   const [saveStatus, setSaveStatus] = useState<{ date: string; status: SaveStatus }>({ date: '', status: 'idle' })
   const [reloadNonce, setReloadNonce] = useState(0)
   const [isMorningOpen, setIsMorningOpen] = useState(false)
   const [isNotebookOpen, setIsNotebookOpen] = useState(false)
   const [isEveningOpen, setIsEveningOpen] = useState(false)
+  const [isDeleteConfirmationOpen, setIsDeleteConfirmationOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const loadSequence = useRef(0)
   const entryRevisions = useRef(new Map<string, number>())
   const saveQueues = useRef(new Map<string, Promise<void>>())
@@ -91,6 +94,8 @@ function App() {
   const journalEntryRef = useRef<DailyJournalEntry | null>(null)
   const activeUserId = useRef<string | null>(null)
   const sessionGeneration = useRef(0)
+  const isDeletingRef = useRef(false)
+  const deleteTriggerRef = useRef<HTMLButtonElement>(null)
   const notebookTriggerRef = useRef<HTMLButtonElement>(null)
   const notebookCloseRef = useRef<HTMLButtonElement>(null)
   const notebookTextareaRef = useRef<HTMLTextAreaElement>(null)
@@ -122,6 +127,9 @@ function App() {
       setIsMorningOpen(false)
       setIsNotebookOpen(false)
       setIsEveningOpen(false)
+      setIsDeleteConfirmationOpen(false)
+      isDeletingRef.current = false
+      setIsDeleting(false)
     }
     setUser(nextUser)
   }, [])
@@ -189,6 +197,7 @@ function App() {
   }, [applyAuthenticatedUser, reloadNonce, selectedDateValue, user])
 
   async function selectDate(date: Date) {
+    if (isDeletingRef.current) return
     await flushPendingSave(selectedDateValue)
     journalEntryRef.current = null
     setSelectedDate(date)
@@ -244,7 +253,7 @@ function App() {
         if (saveSessionGeneration !== sessionGeneration.current) return
         if (saveQueues.current.get(entry.date) !== queuedSave) return
         saveQueues.current.delete(entry.date)
-        if (!didFail && entryRevisions.current.get(entry.date) === revision && !pendingEntries.current.has(entry.date)) {
+        if (!didFail && entryRevisions.current.get(entry.date) === revision && !pendingEntries.current.has(entry.date) && !isDeletingRef.current) {
           setSaveStatus({ date: entry.date, status: 'saved' })
         }
       })
@@ -273,6 +282,7 @@ function App() {
   }
 
   function saveEntry(entry: DailyJournalEntry) {
+    if (isDeletingRef.current) return
     const revision = (entryRevisions.current.get(entry.date) ?? 0) + 1
     entryRevisions.current.set(entry.date, revision)
     journalEntryRef.current = entry
@@ -289,6 +299,7 @@ function App() {
   }
 
   async function handleLogout() {
+    if (isDeletingRef.current) return
     try {
       await flushPendingSaves()
       await logout()
@@ -301,6 +312,59 @@ function App() {
     await flushPendingSave(selectedDateValue)
     setIsNotebookOpen(false)
     requestAnimationFrame(() => notebookTriggerRef.current?.focus())
+  }
+
+  function openDeleteConfirmation() {
+    setEntryError(null)
+    setIsMorningOpen(false)
+    setIsNotebookOpen(false)
+    setIsEveningOpen(false)
+    setIsDeleteConfirmationOpen(true)
+  }
+
+  function cancelDeleteConfirmation() {
+    if (isDeleting) return
+    setIsDeleteConfirmationOpen(false)
+    requestAnimationFrame(() => deleteTriggerRef.current?.focus())
+  }
+
+  async function confirmDeleteEntry() {
+    const date = selectedDateValue
+    const userId = activeUserId.current
+    if (isDeletingRef.current || journalEntryRef.current === null) return
+
+    isDeletingRef.current = true
+    setIsDeleting(true)
+    setEntryError(null)
+    setIsDeleteConfirmationOpen(false)
+    entryRevisions.current.set(date, (entryRevisions.current.get(date) ?? 0) + 1)
+    loadSequence.current += 1
+
+    try {
+      await flushPendingSave(date)
+      await deleteJournalEntry(date, userId ?? undefined)
+      pendingEntries.current.delete(date)
+      const timer = saveTimers.current.get(date)
+      if (timer !== undefined) {
+        clearTimeout(timer)
+        saveTimers.current.delete(date)
+      }
+      journalEntryRef.current = null
+      setJournalEntry(null)
+      setSaveStatus({ date, status: 'idle' })
+      setIsMorningOpen(false)
+      setIsNotebookOpen(false)
+      setIsEveningOpen(false)
+    } catch (error: unknown) {
+      if (error instanceof ApiError && error.status === 401) {
+        applyAuthenticatedUser(null)
+        return
+      }
+      setEntryError({ date, message: error instanceof Error ? error.message : 'Unable to delete this entry.', phase: 'delete' })
+    } finally {
+      isDeletingRef.current = false
+      setIsDeleting(false)
+    }
   }
 
   useEffect(() => {
@@ -398,6 +462,7 @@ function App() {
     ({ field }) => evening?.[field]?.trim() !== '',
   ).length
   const activeSaveStatus = saveStatus.date === selectedDateValue ? saveStatus.status : 'idle'
+  const hasEntry = journalEntry !== null
   const saveStatusLabel = activeSaveStatus === 'saving'
     ? 'Saving'
     : activeSaveStatus === 'saved'
@@ -419,6 +484,7 @@ function App() {
               className="date-navigation-button"
               type="button"
               onClick={() => selectDate(addCalendarDays(selectedDate, -1))}
+              disabled={isDeleting}
             >
               <span className="date-navigation-chevron" aria-hidden="true">‹</span>
               Previous
@@ -427,7 +493,7 @@ function App() {
               className="date-navigation-button"
               type="button"
               onClick={() => selectDate(getCurrentLocalDate())}
-              disabled={isToday}
+              disabled={isToday || isDeleting}
             >
               Today
             </button>
@@ -435,6 +501,7 @@ function App() {
               className="date-navigation-button"
               type="button"
               onClick={() => selectDate(addCalendarDays(selectedDate, 1))}
+              disabled={isDeleting}
             >
               Next
               <span className="date-navigation-chevron" aria-hidden="true">›</span>
@@ -446,11 +513,22 @@ function App() {
             </span>
             <div className="journal-account">
               <span>Signed in as {user.email}</span>
-              <button className="journal-logout" onClick={handleLogout} type="button">Sign out</button>
+              <button className="journal-logout" onClick={handleLogout} type="button" disabled={isDeleting}>Sign out</button>
             </div>
           </div>
         </div>
-        {entryError?.date === selectedDateValue && entryError.phase === 'save' && (
+        <div className="journal-entry-actions">
+          <button
+            className="journal-delete-entry"
+            type="button"
+            onClick={openDeleteConfirmation}
+            disabled={!hasEntry || isDeleting}
+            ref={deleteTriggerRef}
+          >
+            Delete entry
+          </button>
+        </div>
+        {entryError?.date === selectedDateValue && (entryError.phase === 'save' || entryError.phase === 'delete') && (
           <p className="journal-sync-error" role="alert">{entryError.message}</p>
         )}
       </header>
@@ -468,6 +546,7 @@ function App() {
           className="notebook-card"
           type="button"
           onClick={() => setIsNotebookOpen(true)}
+          disabled={isDeleting}
           aria-haspopup="dialog"
           ref={notebookTriggerRef}
         >
@@ -503,7 +582,7 @@ function App() {
                       checked={goal?.completed ?? false}
                       onChange={() => toggleGoalCompleted(index)}
                       onBlur={() => void flushPendingSave(selectedDateValue)}
-                      disabled={!isPopulated}
+                      disabled={!isPopulated || isDeleting}
                       aria-label={`Mark Goal #${position} ${goal?.completed ? 'incomplete' : 'complete'}`}
                     />
                     <span className="goal-completion-indicator" aria-hidden="true">✓</span>
@@ -517,6 +596,7 @@ function App() {
                       onBlur={() => void flushPendingSave(selectedDateValue)}
                       aria-label={`Priority ${position}`}
                       placeholder="Add a goal"
+                      disabled={isDeleting}
                     />
                   </div>
                 </li>
@@ -529,6 +609,7 @@ function App() {
           className="morning-card"
           type="button"
           onClick={() => setIsMorningOpen(true)}
+          disabled={isDeleting}
           aria-haspopup="dialog"
         >
           <span className="morning-card-title">Morning</span>
@@ -543,6 +624,7 @@ function App() {
           className="notebook-card evening-card"
           type="button"
           onClick={() => setIsEveningOpen(true)}
+          disabled={isDeleting}
           aria-haspopup="dialog"
         >
           <span className="notebook-card-title">Evening Review</span>
@@ -554,7 +636,7 @@ function App() {
       </section>
       )}
 
-      {isMorningOpen && (
+      {isMorningOpen && !isDeleting && (
         <div className="morning-modal-backdrop">
           <section
             className="morning-modal"
@@ -604,7 +686,7 @@ function App() {
         </div>
       )}
 
-      {isNotebookOpen && (
+      {isNotebookOpen && !isDeleting && (
         <div className="morning-modal-backdrop notebook-modal-backdrop">
           <section
             className="morning-modal notebook-modal"
@@ -649,7 +731,7 @@ function App() {
         </div>
       )}
 
-      {isEveningOpen && (
+      {isEveningOpen && !isDeleting && (
         <div className="morning-modal-backdrop">
           <section
             className="morning-modal evening-modal"
@@ -718,6 +800,29 @@ function App() {
                 />
               </div>
             ))}
+          </section>
+        </div>
+      )}
+
+      {isDeleteConfirmationOpen && (
+        <div className="morning-modal-backdrop">
+          <section
+            className="morning-modal delete-confirmation-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-confirmation-title"
+          >
+            <div className="morning-modal-header">
+              <div>
+                <p className="morning-modal-eyebrow">Delete entry</p>
+                <h2 id="delete-confirmation-title">Delete this journal entry?</h2>
+              </div>
+            </div>
+            <p className="delete-confirmation-copy">This permanently deletes the entry for {formattedDate}.</p>
+            <div className="delete-confirmation-actions">
+              <button className="morning-modal-close" type="button" onClick={cancelDeleteConfirmation}>Cancel</button>
+              <button className="delete-confirmation-button" type="button" onClick={() => void confirmDeleteEntry()}>Delete entry</button>
+            </div>
           </section>
         </div>
       )}
