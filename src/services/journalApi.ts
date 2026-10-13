@@ -80,6 +80,24 @@ export async function getJournalEntry(date: string, signal?: AbortSignal): Promi
   return data === null ? null : data.content as unknown as DailyJournalEntry
 }
 
+export async function getJournalEntriesForDateRange(
+  startDate: string,
+  endDate: string,
+  signal?: AbortSignal,
+): Promise<DailyJournalEntry[]> {
+  const user = await requireCurrentUser()
+  const { data, error } = await getSupabaseClient()
+    .from('journal_entries')
+    .select('content')
+    .eq('user_id', user.id)
+    .gte('entry_date', startDate)
+    .lt('entry_date', endDate)
+    .abortSignal(signal ?? new AbortController().signal)
+
+  if (error !== null) throw toApiError(error)
+  return data.map((row) => row.content as unknown as DailyJournalEntry)
+}
+
 export async function saveJournalEntry(entry: DailyJournalEntry, expectedUserId?: string): Promise<void> {
   const user = await requireCurrentUser()
   if (expectedUserId !== undefined && user.id !== expectedUserId) {

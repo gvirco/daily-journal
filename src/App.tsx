@@ -12,12 +12,14 @@ import {
   ApiError,
   deleteJournalEntry,
   getCurrentUser,
+  getJournalEntriesForDateRange,
   getJournalEntry,
   logout,
   onAuthStateChange,
   saveJournalEntry,
   type AuthenticatedUser,
 } from './services/journalApi'
+import { getWeatherForDate, type DailyWeather } from './services/weatherApi'
 
 function getCurrentLocalDate() {
   const now = new Date()
@@ -30,6 +32,14 @@ function addCalendarDays(date: Date, days: number) {
   nextDate.setDate(nextDate.getDate() + days)
 
   return nextDate
+}
+
+function getMonthStart(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1)
+}
+
+function addCalendarMonths(date: Date, months: number) {
+  return new Date(date.getFullYear(), date.getMonth() + months, 1)
 }
 
 function toDateInputValue(date: Date) {
@@ -45,6 +55,37 @@ const eveningReflectionFields = [
   { field: 'whatDidNotWork', label: "What didn't?" },
   { field: 'whatDidILearn', label: 'What did I learn?' },
 ] as const
+
+type CalendarEntryStatus = 'empty' | 'partial' | 'complete'
+
+function hasText(value: string | undefined) {
+  return value !== undefined && value.trim().length > 0
+}
+
+function getCalendarEntryStatus(entry: DailyJournalEntry | undefined): CalendarEntryStatus {
+  if (entry === undefined) return 'empty'
+
+  const hasActivity = hasText(entry.notes)
+    || entry.goals?.some((goal) => hasText(goal.text)) === true
+    || Object.values(entry.morning ?? {}).some((rating) => rating !== undefined)
+    || entry.evening?.dayRating !== undefined
+    || eveningReflectionFields.some(({ field }) => hasText(entry.evening?.[field]))
+
+  if (!hasActivity) return 'empty'
+
+  const hasCompletedGoals = Array.from({ length: 3 }, (_, index) => {
+    const goal = entry.goals?.[index]
+    return goal?.completed === true && hasText(goal.text)
+  }).every(Boolean)
+  const hasMorningRatings = entry.morning?.energy !== undefined
+    && entry.morning.mood !== undefined
+    && entry.morning.focus !== undefined
+  const hasReflections = eveningReflectionFields.every(({ field }) => hasText(entry.evening?.[field]))
+
+  return hasCompletedGoals && hasMorningRatings && entry.evening?.dayRating !== undefined && hasReflections
+    ? 'complete'
+    : 'partial'
+}
 
 type SegmentedIndicatorProps = {
   label: string
@@ -69,6 +110,95 @@ function SegmentedIndicator({ label, value, maximum = 10 }: SegmentedIndicatorPr
   )
 }
 
+type OverviewCalendarProps = {
+  entries: DailyJournalEntry[]
+  month: Date
+  onSelectDate: (date: Date) => void
+  selectedDate: string
+}
+
+const calendarStatusLabels: Record<CalendarEntryStatus, string> = {
+  empty: 'No meaningful content',
+  partial: 'Partially completed',
+  complete: 'Fully completed',
+}
+
+function OverviewCalendar({ entries, month, onSelectDate, selectedDate }: OverviewCalendarProps) {
+  const monthStart = getMonthStart(month)
+  const firstWeekday = (monthStart.getDay() + 6) % 7
+  const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
+  const entriesByDate = new Map(entries.map((entry) => [entry.date, entry]))
+  const totalCells = Math.ceil((firstWeekday + daysInMonth) / 7) * 7
+  const calendarCells = Array.from({ length: totalCells }, (_, index) => {
+    if (index < firstWeekday || index >= firstWeekday + daysInMonth) return null
+    const date = new Date(month.getFullYear(), month.getMonth(), index - firstWeekday + 1)
+    const dateValue = toDateInputValue(date)
+    const status = getCalendarEntryStatus(entriesByDate.get(dateValue))
+
+    return { date, dateValue, status }
+  })
+
+  return (
+    <>
+      <div className="overview-weekdays" aria-hidden="true">
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => <span key={day}>{day}</span>)}
+      </div>
+      <div className="overview-calendar" role="group" aria-label={`Journal entries for ${new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(month)}`}>
+        {calendarCells.map((cell, index) => cell === null ? (
+          <span className="overview-calendar-empty" aria-hidden="true" key={`empty-${index}`} />
+        ) : (
+          <button
+            aria-label={`${new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(cell.date)}: ${calendarStatusLabels[cell.status]}`}
+            aria-pressed={cell.dateValue === selectedDate}
+            className={`overview-calendar-date overview-calendar-date-${cell.status}`}
+            key={cell.dateValue}
+            onClick={() => onSelectDate(cell.date)}
+            type="button"
+          >
+            <span>{cell.date.getDate()}</span>
+            <span className="overview-status-marker" aria-hidden="true" />
+          </button>
+        ))}
+      </div>
+      <div className="overview-legend" aria-label="Calendar status legend">
+        {(Object.keys(calendarStatusLabels) as CalendarEntryStatus[]).map((status) => (
+          <span className="overview-legend-item" key={status}>
+            <span className={`overview-status-marker overview-status-marker-${status}`} aria-hidden="true" />
+            {calendarStatusLabels[status]}
+          </span>
+        ))}
+      </div>
+    </>
+  )
+}
+
+type WeatherState = {
+  date: string
+  weather: DailyWeather | null
+}
+
+function WeatherIndicator({ date, weatherState }: { date: string; weatherState: WeatherState | null }) {
+  const weather = weatherState?.date === date ? weatherState.weather : undefined
+
+  if (weather === undefined) {
+    return <span className="weather-indicator" aria-live="polite">Loading weatherâ€¦</span>
+  }
+  if (weather === null) {
+    return <span className="weather-indicator" aria-live="polite">Weather unavailable</span>
+  }
+
+  return (
+    <span className="weather-indicator" aria-label={`${weather.conditions} in Vilnius, ${Math.round(weather.high)} degrees high and ${Math.round(weather.low)} degrees low, ${weather.source}`}>
+      <span className="weather-icon" aria-hidden="true">{weather.icon}</span>
+      <span className="weather-details">
+        <span>H {Math.round(weather.high)}&#176; / L {Math.round(weather.low)}&#176;</span>
+        <span>{weather.conditions} &middot; Vilnius</span>
+      </span>
+      <span className="weather-source">{weather.source === 'historical' ? 'Historical' : 'Forecast'}</span>
+    </span>
+  )
+}
+
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'failed'
 
 function App() {
@@ -84,6 +214,12 @@ function App() {
   const [isMorningOpen, setIsMorningOpen] = useState(false)
   const [isNotebookOpen, setIsNotebookOpen] = useState(false)
   const [isEveningOpen, setIsEveningOpen] = useState(false)
+  const [isOverviewOpen, setIsOverviewOpen] = useState(false)
+  const [overviewMonth, setOverviewMonth] = useState(getMonthStart(selectedDate))
+  const [overviewEntries, setOverviewEntries] = useState<DailyJournalEntry[]>([])
+  const [overviewStatus, setOverviewStatus] = useState<'idle' | 'loading' | 'error'>('idle')
+  const [overviewReloadNonce, setOverviewReloadNonce] = useState(0)
+  const [weatherState, setWeatherState] = useState<WeatherState | null>(null)
   const [isDeleteConfirmationOpen, setIsDeleteConfirmationOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const loadSequence = useRef(0)
@@ -99,6 +235,8 @@ function App() {
   const notebookTriggerRef = useRef<HTMLButtonElement>(null)
   const notebookCloseRef = useRef<HTMLButtonElement>(null)
   const notebookTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const overviewTriggerRef = useRef<HTMLButtonElement>(null)
+  const overviewCloseRef = useRef<HTMLButtonElement>(null)
   const today = getCurrentLocalDate()
   const selectedDateValue = toDateInputValue(selectedDate)
   const formattedDate = new Intl.DateTimeFormat('en-GB', {
@@ -127,6 +265,7 @@ function App() {
       setIsMorningOpen(false)
       setIsNotebookOpen(false)
       setIsEveningOpen(false)
+      setIsOverviewOpen(false)
       setIsDeleteConfirmationOpen(false)
       isDeletingRef.current = false
       setIsDeleting(false)
@@ -196,6 +335,46 @@ function App() {
     return () => controller.abort()
   }, [applyAuthenticatedUser, reloadNonce, selectedDateValue, user])
 
+  useEffect(() => {
+    const controller = new AbortController()
+
+    getWeatherForDate(selectedDateValue, controller.signal)
+      .then((weather) => {
+        if (!controller.signal.aborted) setWeatherState({ date: selectedDateValue, weather })
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setWeatherState({ date: selectedDateValue, weather: null })
+      })
+
+    return () => controller.abort()
+  }, [selectedDateValue])
+
+  useEffect(() => {
+    if (!isOverviewOpen || user === null) return
+
+    const controller = new AbortController()
+    const monthStart = toDateInputValue(overviewMonth)
+    const monthEnd = toDateInputValue(addCalendarMonths(overviewMonth, 1))
+
+    getJournalEntriesForDateRange(monthStart, monthEnd, controller.signal)
+      .then((entries) => {
+        if (!controller.signal.aborted) {
+          setOverviewEntries(entries)
+          setOverviewStatus('idle')
+        }
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return
+        if (error instanceof ApiError && error.status === 401) {
+          applyAuthenticatedUser(null)
+          return
+        }
+        setOverviewStatus('error')
+      })
+
+    return () => controller.abort()
+  }, [applyAuthenticatedUser, isOverviewOpen, overviewMonth, overviewReloadNonce, user])
+
   async function selectDate(date: Date) {
     if (isDeletingRef.current) return
     await flushPendingSave(selectedDateValue)
@@ -208,6 +387,7 @@ function App() {
     setIsMorningOpen(false)
     setIsNotebookOpen(false)
     setIsEveningOpen(false)
+    setIsOverviewOpen(false)
   }
 
   function updateMorningRating(field: keyof MorningJournal, rating: Rating10) {
@@ -322,6 +502,35 @@ function App() {
     setIsDeleteConfirmationOpen(true)
   }
 
+  function openOverview() {
+    setOverviewMonth(getMonthStart(selectedDate))
+    setOverviewEntries([])
+    setOverviewStatus('loading')
+    setIsOverviewOpen(true)
+  }
+
+  function changeOverviewMonth(months: number) {
+    setOverviewEntries([])
+    setOverviewStatus('loading')
+    setOverviewMonth((month) => addCalendarMonths(month, months))
+  }
+
+  function retryOverviewLoad() {
+    setOverviewEntries([])
+    setOverviewStatus('loading')
+    setOverviewReloadNonce((value) => value + 1)
+  }
+
+  function closeOverview() {
+    setIsOverviewOpen(false)
+    requestAnimationFrame(() => overviewTriggerRef.current?.focus())
+  }
+
+  async function selectOverviewDate(date: Date) {
+    setIsOverviewOpen(false)
+    await selectDate(date)
+  }
+
   function cancelDeleteConfirmation() {
     if (isDeleting) return
     setIsDeleteConfirmationOpen(false)
@@ -381,6 +590,21 @@ function App() {
 
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isNotebookOpen])
+
+  useEffect(() => {
+    if (!isOverviewOpen) return
+
+    overviewCloseRef.current?.focus()
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        overviewCloseRef.current?.click()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOverviewOpen])
 
   if (isAuthLoading) {
     return <main className="auth-shell"><p className="auth-status">Restoring your session…</p></main>
@@ -456,10 +680,10 @@ function App() {
   const morning = journalEntry?.morning
   const goals: DailyGoal[] = journalEntry?.goals ?? []
   const notes = journalEntry?.notes ?? ''
-  const notesPreview = notes.trim() === '' ? null : notes.replace(/\s+/g, ' ').trim()
+  const notesPreview = notes.trim() === '' ? null : notes
   const evening = journalEntry?.evening
   const reflectionCount = eveningReflectionFields.filter(
-    ({ field }) => evening?.[field]?.trim() !== '',
+    ({ field }) => typeof evening?.[field] === 'string' && evening[field].trim().length > 0,
   ).length
   const activeSaveStatus = saveStatus.date === selectedDateValue ? saveStatus.status : 'idle'
   const hasEntry = journalEntry !== null
@@ -506,8 +730,27 @@ function App() {
               Next
               <span className="date-navigation-chevron" aria-hidden="true">›</span>
             </button>
+            <button
+              className="date-navigation-button"
+              type="button"
+              onClick={openOverview}
+              disabled={isDeleting}
+              ref={overviewTriggerRef}
+            >
+              Overview
+            </button>
+            <button
+              className="journal-delete-entry"
+              type="button"
+              onClick={openDeleteConfirmation}
+              disabled={!hasEntry || isDeleting}
+              ref={deleteTriggerRef}
+            >
+              Delete entry
+            </button>
           </nav>
           <div className="journal-header-meta">
+            <WeatherIndicator date={selectedDateValue} weatherState={weatherState} />
             <span className={`journal-save-status journal-save-status-${activeSaveStatus}`} aria-live="polite">
               {saveStatusLabel}
             </span>
@@ -516,17 +759,6 @@ function App() {
               <button className="journal-logout" onClick={handleLogout} type="button" disabled={isDeleting}>Sign out</button>
             </div>
           </div>
-        </div>
-        <div className="journal-entry-actions">
-          <button
-            className="journal-delete-entry"
-            type="button"
-            onClick={openDeleteConfirmation}
-            disabled={!hasEntry || isDeleting}
-            ref={deleteTriggerRef}
-          >
-            Delete entry
-          </button>
         </div>
         {entryError?.date === selectedDateValue && (entryError.phase === 'save' || entryError.phase === 'delete') && (
           <p className="journal-sync-error" role="alert">{entryError.message}</p>
@@ -554,9 +786,7 @@ function App() {
           <span className="notebook-preview">
             {notesPreview === null
               ? 'Not entered'
-              : notesPreview.length > 120
-                ? `${notesPreview.slice(0, 120)}…`
-                : notesPreview}
+              : notesPreview}
           </span>
         </button>
 
@@ -823,6 +1053,58 @@ function App() {
               <button className="morning-modal-close" type="button" onClick={cancelDeleteConfirmation}>Cancel</button>
               <button className="delete-confirmation-button" type="button" onClick={() => void confirmDeleteEntry()}>Delete entry</button>
             </div>
+          </section>
+        </div>
+      )}
+
+      {isOverviewOpen && (
+        <div className="morning-modal-backdrop">
+          <section
+            className="morning-modal overview-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="overview-modal-title"
+          >
+            <div className="morning-modal-header">
+              <div>
+                <p className="morning-modal-eyebrow">Journal overview</p>
+                <h2 id="overview-modal-title">{new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(overviewMonth)}</h2>
+              </div>
+              <button
+                className="morning-modal-close"
+                type="button"
+                onClick={closeOverview}
+                aria-label="Close journal overview"
+                ref={overviewCloseRef}
+              >
+                Close
+              </button>
+            </div>
+            <div className="overview-month-navigation" aria-label="Calendar month navigation">
+              <button className="date-navigation-button" type="button" onClick={() => changeOverviewMonth(-1)}>
+                <span className="date-navigation-chevron" aria-hidden="true">‹</span>
+                Previous month
+              </button>
+              <button className="date-navigation-button" type="button" onClick={() => changeOverviewMonth(1)}>
+                Next month
+                <span className="date-navigation-chevron" aria-hidden="true">›</span>
+              </button>
+            </div>
+            {overviewStatus === 'loading' ? (
+              <p className="overview-status" aria-live="polite">Loading monthâ€¦</p>
+            ) : overviewStatus === 'error' ? (
+              <div className="overview-status overview-error" role="alert">
+                <span>Unable to load this month.</span>
+                <button className="date-navigation-button" type="button" onClick={retryOverviewLoad}>Retry</button>
+              </div>
+            ) : (
+              <OverviewCalendar
+                entries={overviewEntries}
+                month={overviewMonth}
+                onSelectDate={selectOverviewDate}
+                selectedDate={selectedDateValue}
+              />
+            )}
           </section>
         </div>
       )}
