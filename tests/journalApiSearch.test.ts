@@ -8,7 +8,7 @@ const alice = { id: 'alice', email: 'a@example.com' }
 const bob = { id: 'bob', email: 'b@example.com' }
 const row = (index: number) => ({ entry_date: '2026-01-' + String(index % 28 + 1).padStart(2, '0'), content: { notes: 'Row ' + index } })
 
-type Page = { data: ReturnType<typeof row>[]; error: null } | { data: null; error: { message: string; status: number } }
+type Page = { data: Array<{ entry_date: string; content: { notes: string; date?: string } }>; error: null } | { data: null; error: { message: string; status: number } }
 function setup(pages: Page[], session: { user: typeof alice } | null = { user: alice }) {
   const query = { select: vi.fn(), eq: vi.fn(), order: vi.fn(), range: vi.fn(), abortSignal: vi.fn() }
   query.select.mockReturnValue(query)
