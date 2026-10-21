@@ -38,3 +38,7 @@ Before deletion, the UI blocks conflicting edits, date changes, and sign-out; fl
 ## Deployment and configuration
 
 Vite reads the two public environment variables at build time. Vercel uses `npm run build`; no server-side Supabase secret or service-role key belongs in the frontend. The database schema is maintained through SQL migrations under `supabase/migrations/`.
+
+## Historical journal search
+
+The Search dialog in src/components/JournalSearch.tsx requests the authenticated user's complete history through src/services/journalApi.ts (100-row pages). A pure filter in src/domain/journalSearch.ts matches title, notes, priorities and evening reflections, case-insensitively. Results open a date using the existing load/autosave flow. Supabase RLS remains the authorization boundary; the API filters by user_id and rejects a changed session. This MVP does not add indexes or migrations; large journals may warrant server-side indexed search later.

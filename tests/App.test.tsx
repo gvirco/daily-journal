@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const api = vi.hoisted(() => ({
   deleteJournalEntry: vi.fn(),
+  getAllJournalEntries: vi.fn(),
   getCurrentUser: vi.fn(),
   getJournalEntry: vi.fn(),
   logout: vi.fn(),
@@ -20,6 +21,7 @@ vi.mock('../src/services/journalApi', () => ({
     }
   },
   deleteJournalEntry: api.deleteJournalEntry,
+  getAllJournalEntries: api.getAllJournalEntries,
   getCurrentUser: api.getCurrentUser,
   getJournalEntry: api.getJournalEntry,
   logout: api.logout,
@@ -35,6 +37,7 @@ const entry = { date: '2026-10-13', goals: [{ completed: false, text: 'Existing 
 describe('journal deletion', () => {
   beforeEach(() => {
     api.getCurrentUser.mockResolvedValue(user)
+    api.getAllJournalEntries.mockResolvedValue([])
     api.getJournalEntry.mockResolvedValue(entry)
     api.saveJournalEntry.mockResolvedValue(undefined)
     api.deleteJournalEntry.mockResolvedValue(undefined)
@@ -73,6 +76,29 @@ describe('journal deletion', () => {
     const alert = await screen.findByRole('alert')
     expect(alert.textContent).toContain('Network unavailable')
     expect((screen.getByLabelText('Priority 1') as HTMLInputElement).value).toBe('Existing priority')
+  })
+
+  it('opens search and navigates to a matching historical date', async () => {
+    api.getAllJournalEntries.mockResolvedValueOnce([{ date: '2026-01-01', title: 'Winter reflection', notes: 'Snow day' }])
+    render(<App />)
+    await screen.findByLabelText('Priority 1')
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }))
+    const searchInput = await screen.findByLabelText('Search title and content')
+    fireEvent.change(searchInput, { target: { value: 'WINTER' } })
+    fireEvent.click(await screen.findByRole('button', { name: /Winter reflection/ }))
+    await waitFor(() => expect(api.getJournalEntry).toHaveBeenCalledWith('2026-01-01', expect.any(AbortSignal)))
+  })
+
+  it('saves an optional title via the existing journal autosave', async () => {
+    render(<App />)
+    await screen.findByLabelText('Priority 1')
+    fireEvent.click(screen.getByRole('button', { name: /Daily Notebook/ }))
+    const titleInput = screen.getByLabelText('Journal title (optional)')
+    fireEvent.change(titleInput, { target: { value: 'My milestone' } })
+    fireEvent.blur(titleInput)
+    await waitFor(() => expect(api.saveJournalEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'My milestone' }), user.id,
+    ))
   })
 
   it('uses native input validation attributes for registration fields', async () => {

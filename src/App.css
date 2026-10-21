@@ -1050,3 +1050,90 @@
   }
 
 }
+
+/* Historical search: reuse existing dark modal and control styling. */
+.search-modal {
+  width: min(100%, var(--modal-width-large));
+  max-height: calc(100dvh - var(--space-8));
+  display: flex;
+  flex-direction: column;
+}
+.search-label {
+  margin-top: var(--space-5);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+.search-input,
+.journal-title-input {
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-control);
+  font: inherit;
+}
+.search-input { margin-top: var(--space-2); }
+.journal-title-label { margin-top: var(--space-5); }
+.journal-title-input { margin-top: var(--space-2); flex: 0 0 auto; }
+.search-input:focus-visible,
+.journal-title-input:focus-visible,
+.search-result:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.search-status {
+  margin: var(--space-4) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+.search-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  color: var(--color-danger);
+}
+.search-results {
+  min-height: 0;
+  overflow-y: auto;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.search-results li + li { margin-top: var(--space-2); }
+.search-result {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: var(--control-height);
+  padding: var(--space-3);
+  text-align: left;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  font: inherit;
+}
+.search-result:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-accent);
+}
+.search-result-date { color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.search-result-title { font-weight: 600; overflow-wrap: anywhere; }
+.search-result-preview {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .search-modal { width: 100%; max-height: calc(100dvh - var(--space-4)); }
+}
