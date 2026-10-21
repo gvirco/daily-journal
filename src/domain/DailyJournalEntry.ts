@@ -20,6 +20,7 @@ export interface EveningReview {
 
 export interface DailyJournalEntry {
   date: string
+  title?: string
   morning?: MorningJournal
   goals?: DailyGoal[]
   notes?: string
