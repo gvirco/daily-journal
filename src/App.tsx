@@ -8,6 +8,7 @@ import type {
 } from './domain/DailyJournalEntry'
 import './App.css'
 import { AuthScreen } from './components/AuthScreen'
+import { JournalSearch } from './components/JournalSearch'
 import {
   ApiError,
   deleteJournalEntry,
@@ -215,6 +216,7 @@ function App() {
   const [isNotebookOpen, setIsNotebookOpen] = useState(false)
   const [isEveningOpen, setIsEveningOpen] = useState(false)
   const [isOverviewOpen, setIsOverviewOpen] = useState(false)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [overviewMonth, setOverviewMonth] = useState(getMonthStart(selectedDate))
   const [overviewEntries, setOverviewEntries] = useState<DailyJournalEntry[]>([])
   const [overviewStatus, setOverviewStatus] = useState<'idle' | 'loading' | 'error'>('idle')
@@ -236,6 +238,7 @@ function App() {
   const notebookCloseRef = useRef<HTMLButtonElement>(null)
   const notebookTextareaRef = useRef<HTMLTextAreaElement>(null)
   const overviewTriggerRef = useRef<HTMLButtonElement>(null)
+  const searchTriggerRef = useRef<HTMLButtonElement>(null)
   const overviewCloseRef = useRef<HTMLButtonElement>(null)
   const today = getCurrentLocalDate()
   const selectedDateValue = toDateInputValue(selectedDate)
@@ -266,12 +269,19 @@ function App() {
       setIsNotebookOpen(false)
       setIsEveningOpen(false)
       setIsOverviewOpen(false)
+      setIsSearchOpen(false)
       setIsDeleteConfirmationOpen(false)
       isDeletingRef.current = false
       setIsDeleting(false)
     }
     setUser(nextUser)
   }, [])
+
+  const closeSearch = useCallback(() => {
+    setIsSearchOpen(false)
+    requestAnimationFrame(() => searchTriggerRef.current?.focus())
+  }, [])
+  const expireSearchSession = useCallback(() => applyAuthenticatedUser(null), [applyAuthenticatedUser])
 
   useEffect(() => {
     let isCurrent = true
@@ -388,6 +398,7 @@ function App() {
     setIsNotebookOpen(false)
     setIsEveningOpen(false)
     setIsOverviewOpen(false)
+    setIsSearchOpen(false)
   }
 
   function updateMorningRating(field: keyof MorningJournal, rating: Rating10) {
@@ -500,6 +511,12 @@ function App() {
     setIsNotebookOpen(false)
     setIsEveningOpen(false)
     setIsDeleteConfirmationOpen(true)
+  }
+
+  async function openSearch() {
+    if (isDeletingRef.current) return
+    await flushPendingSave(selectedDateValue)
+    setIsSearchOpen(true)
   }
 
   function openOverview() {
@@ -654,6 +671,15 @@ function App() {
     })
   }
 
+  function updateTitle(title: string) {
+    const currentEntry = journalEntryRef.current
+    saveEntry({
+      ...(currentEntry ?? { date: selectedDateValue }),
+      date: selectedDateValue,
+      title: title === '' ? undefined : title,
+    })
+  }
+
   function updateNotes(notes: string) {
     const currentEntry = journalEntryRef.current
     saveEntry({
@@ -680,6 +706,7 @@ function App() {
   const morning = journalEntry?.morning
   const goals: DailyGoal[] = journalEntry?.goals ?? []
   const notes = journalEntry?.notes ?? ''
+  const title = journalEntry?.title ?? ''
   const notesPreview = notes.trim() === '' ? null : notes
   const evening = journalEntry?.evening
   const reflectionCount = eveningReflectionFields.filter(
@@ -729,6 +756,15 @@ function App() {
             >
               Next
               <span className="date-navigation-chevron" aria-hidden="true">›</span>
+            </button>
+            <button
+              className="date-navigation-button"
+              type="button"
+              onClick={() => void openSearch()}
+              disabled={isDeleting}
+              ref={searchTriggerRef}
+            >
+              Search
             </button>
             <button
               className="date-navigation-button"
@@ -942,6 +978,16 @@ function App() {
                 </button>
               </div>
             </div>
+            <label className="notebook-text-label journal-title-label" htmlFor="journal-entry-title">Journal title (optional)</label>
+            <input
+              className="journal-title-input"
+              id="journal-entry-title"
+              type="text"
+              value={title}
+              onChange={(event) => updateTitle(event.target.value)}
+              onBlur={() => void flushPendingSave(selectedDateValue)}
+              placeholder="Give this day a title"
+            />
             <div className="notebook-editor-body">
               <textarea
                 className="notebook-textarea"
@@ -1055,6 +1101,14 @@ function App() {
             </div>
           </section>
         </div>
+      )}
+
+      {isSearchOpen && !isDeleting && (
+        <JournalSearch
+          onClose={closeSearch}
+          onSelectDate={(date) => { void selectDate(new Date(`${date}T12:00:00`)) }}
+          onSessionExpired={expireSearchSession}
+        />
       )}
 
       {isOverviewOpen && (
