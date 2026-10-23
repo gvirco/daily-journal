@@ -59,6 +59,23 @@ describe('TasksPage', () => {
     expect(await screen.findByText('Only once')).toBeTruthy()
   })
 
+  it('keeps a newly created task when the initial load resolves afterwards', async () => {
+    let resolveLoad: (tasks: Array<{ id: string; title: string; dueDate: string; priority: 'Medium'; completed: boolean }>) => void = () => undefined
+    api.getTasks.mockImplementationOnce(() => new Promise((resolve) => { resolveLoad = resolve }))
+    api.createTask.mockResolvedValueOnce({ id: 'created', title: 'Created while loading', dueDate: '2026-10-31', priority: 'Medium', completed: false })
+    render(<TasksPage userId="user-1" onBack={vi.fn()} />)
+
+    fireEvent.change(screen.getByLabelText('Task'), { target: { value: 'Created while loading' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Due date' }))
+    fireEvent.click(screen.getByRole('button', { name: /October 31st, 2026/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add task' }))
+
+    expect(await screen.findByText('Created while loading')).toBeTruthy()
+    resolveLoad([{ id: 'stale', title: 'Stale server result', dueDate: '2026-10-30', priority: 'Medium', completed: false }])
+    await waitFor(() => expect(screen.getByText('Created while loading')).toBeTruthy())
+    expect(screen.queryByText('Stale server result')).toBeNull()
+  })
+
   it('keeps an existing task after an update failure', async () => {
     api.getTasks.mockResolvedValue([{ id: 'task-1', title: 'Keep me', dueDate: '2026-10-31', priority: 'Medium', completed: false }])
     api.updateTask.mockRejectedValueOnce(new Error('Network unavailable'))

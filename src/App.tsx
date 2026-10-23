@@ -391,6 +391,7 @@ function App() {
   async function selectDate(date: Date) {
     if (isDeletingRef.current) return
     await flushPendingSave(selectedDateValue)
+    setIsTasksOpen(false)
     journalEntryRef.current = null
     setSelectedDate(date)
     setJournalEntry(null)

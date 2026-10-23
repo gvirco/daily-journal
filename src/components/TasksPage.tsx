@@ -25,15 +25,17 @@ function TaskDatePicker({ label, value, onChange }: { label: string; value: stri
 
 function TasksPageContent({ userId, onBack }: Props) {
   const [tasks, setTasks] = useState<Task[]>([]); const [title, setTitle] = useState(''); const [dueDate, setDueDate] = useState(''); const [priority, setPriority] = useState<TaskPriority>('Medium')
-  const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null); const [success, setSuccess] = useState<string | null>(null); const [editing, setEditing] = useState<Task | null>(null); const [deleting, setDeleting] = useState<Task | null>(null); const [pendingTaskIds, setPendingTaskIds] = useState<Set<string>>(new Set()); const [isCreating, setIsCreating] = useState(false); const userRef = useRef(userId); const createLock = useRef(false); const pendingTaskIdsRef = useRef(new Set<string>())
+  const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null); const [success, setSuccess] = useState<string | null>(null); const [editing, setEditing] = useState<Task | null>(null); const [deleting, setDeleting] = useState<Task | null>(null); const [pendingTaskIds, setPendingTaskIds] = useState<Set<string>>(new Set()); const [isCreating, setIsCreating] = useState(false); const userRef = useRef(userId); const createLock = useRef(false); const pendingTaskIdsRef = useRef(new Set<string>()); const taskLoadGeneration = useRef(0)
   useEffect(() => {
     userRef.current = userId
     let active = true
+    const requestGeneration = taskLoadGeneration.current + 1
+    taskLoadGeneration.current = requestGeneration
     const controller = new AbortController()
     void getTasks(userId, controller.signal)
-      .then((loadedTasks) => { if (active) setTasks(loadedTasks) })
-      .catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : 'Unable to load tasks.') })
-      .finally(() => { if (active) setLoading(false) })
+      .then((loadedTasks) => { if (active && taskLoadGeneration.current === requestGeneration) setTasks(loadedTasks) })
+      .catch((reason: unknown) => { if (active && taskLoadGeneration.current === requestGeneration) setError(reason instanceof Error ? reason.message : 'Unable to load tasks.') })
+      .finally(() => { if (active && taskLoadGeneration.current === requestGeneration) setLoading(false) })
     return () => { active = false; controller.abort() }
   }, [userId])
   useEffect(() => {
@@ -43,7 +45,7 @@ function TasksPageContent({ userId, onBack }: Props) {
   }, [success])
   const open = useMemo(() => tasks.filter((task) => !task.completed).sort((a, b) => a.dueDate.localeCompare(b.dueDate)), [tasks])
   const completed = useMemo(() => tasks.filter((task) => task.completed), [tasks])
-  async function submit(event: React.FormEvent) { event.preventDefault(); if (createLock.current || title.trim() === '' || dueDate === '') return; const requestUserId = userId; createLock.current = true; setIsCreating(true); setError(null); setSuccess(null); try { const task = await createTask({ title: title.trim(), dueDate, priority }, requestUserId); if (userRef.current !== requestUserId) return; setTasks((current) => [...current, task]); setTitle(''); setDueDate(''); setPriority('Medium'); setSuccess('Task added.') } catch (e) { if (userRef.current === requestUserId) setError(e instanceof Error ? e.message : 'Unable to create task.') } finally { createLock.current = false; if (userRef.current === requestUserId) setIsCreating(false) } }
+  async function submit(event: React.FormEvent) { event.preventDefault(); if (createLock.current || title.trim() === '' || dueDate === '') return; const requestUserId = userId; createLock.current = true; setIsCreating(true); setError(null); setSuccess(null); try { const task = await createTask({ title: title.trim(), dueDate, priority }, requestUserId); if (userRef.current !== requestUserId) return; taskLoadGeneration.current += 1; setLoading(false); setTasks((current) => [...current, task]); setTitle(''); setDueDate(''); setPriority('Medium'); setSuccess('Task added.') } catch (e) { if (userRef.current === requestUserId) setError(e instanceof Error ? e.message : 'Unable to create task.') } finally { createLock.current = false; if (userRef.current === requestUserId) setIsCreating(false) } }
   async function save(task: Task) { if (pendingTaskIdsRef.current.has(task.id) || task.title.trim() === '') return; const requestUserId = userId; pendingTaskIdsRef.current.add(task.id); setPendingTaskIds(new Set(pendingTaskIdsRef.current)); setError(null); setSuccess(null); try { const updated = await updateTask(task.id, task, requestUserId); if (userRef.current !== requestUserId) return; setTasks((current) => current.map((item) => item.id === updated.id ? updated : item)); setEditing(null); setSuccess('Task saved.') } catch (e) { if (userRef.current === requestUserId) setError(e instanceof Error ? e.message : 'Unable to save task.') } finally { pendingTaskIdsRef.current.delete(task.id); if (userRef.current === requestUserId) setPendingTaskIds(new Set(pendingTaskIdsRef.current)) } }
   async function toggle(task: Task) { await save({ ...task, completed: !task.completed }) }
   async function remove() { if (!deleting || pendingTaskIdsRef.current.has(deleting.id)) return; const task = deleting; const requestUserId = userId; pendingTaskIdsRef.current.add(task.id); setPendingTaskIds(new Set(pendingTaskIdsRef.current)); setError(null); setSuccess(null); try { await deleteTask(task.id, requestUserId); if (userRef.current !== requestUserId) return; setTasks((current) => current.filter((item) => item.id !== task.id)); setDeleting(null); setSuccess('Task deleted.') } catch (e) { if (userRef.current === requestUserId) setError(e instanceof Error ? e.message : 'Unable to delete task.') } finally { pendingTaskIdsRef.current.delete(task.id); if (userRef.current === requestUserId) setPendingTaskIds(new Set(pendingTaskIdsRef.current)) } }
