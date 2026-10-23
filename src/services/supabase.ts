@@ -26,6 +26,35 @@ export type Database = {
         }
         Relationships: []
       }
+      tasks: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          due_date: string
+          priority: 'Low' | 'Medium' | 'High'
+          completed: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string
+          title: string
+          due_date: string
+          priority?: 'Low' | 'Medium' | 'High'
+          completed?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          title?: string
+          due_date?: string
+          priority?: 'Low' | 'Medium' | 'High'
+          completed?: boolean
+        }
+        Relationships: []
+      }
     }
     Views: Record<never, never>
     Functions: Record<never, never>

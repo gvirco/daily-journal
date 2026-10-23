@@ -4,7 +4,7 @@ Daily Journal is a React and TypeScript journal for daily reflection, priorities
 
 ## Feature status
 
-Implemented: email/password authentication, per-user Supabase entries, date navigation, morning ratings, three priorities, a daily notebook with an optional title, evening review, historical journal search, autosave, and confirmed deletion of the selected entry. JSON/CSV export and JSON import are P1 future scope; they are not implemented.
+Implemented: email/password authentication, per-user Supabase journal entries, date navigation, morning ratings, three priorities, a daily notebook with an optional title, evening review, historical journal search, autosave, confirmed journal deletion, and authenticated Tasks with due dates, priorities, completion, editing, and deletion. JSON/CSV export and JSON import are P1 future scope; they are not implemented.
 
 ## Documentation
 
@@ -60,7 +60,7 @@ Production URL: **PENDING — add the confirmed Vercel production URL before sub
 
 ## Data retention
 
-Supabase Auth manages persistent browser sessions. Journal entries are stored in `public.journal_entries` and are isolated by row-level security. Legacy browser `localStorage` data and local SQLite files are preserved but are not used or migrated.
+Supabase Auth manages persistent browser sessions. Journal entries are stored in `public.journal_entries` and Tasks are stored in `public.tasks`; both are isolated by row-level security. Legacy browser `localStorage` data and local SQLite files are preserved but are not used or migrated.
 
 ## Supabase CLI
 

@@ -439,6 +439,62 @@
   border-color: var(--color-accent-hover);
 }
 
+.task-date-picker {
+  position: relative;
+}
+
+.task-date-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  color: var(--color-text);
+  background: var(--color-surface-elevated);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-control);
+  font: inherit;
+  text-align: left;
+}
+
+.task-date-trigger:focus-visible,
+.task-date-trigger:hover {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+.task-calendar-popover {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  padding: var(--space-3);
+  color: var(--color-text);
+  background: var(--color-surface-elevated);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 35%);
+}
+
+.task-calendar-popover .rdp-root {
+  --rdp-accent-color: var(--color-accent);
+  --rdp-accent-background-color: var(--color-surface-hover);
+  --rdp-day-button-border-radius: var(--radius-control);
+  margin: 0;
+}
+
+.task-success {
+  margin: var(--space-3) 0 0;
+  color: var(--color-success);
+  font-size: var(--font-size-sm);
+}
+
+.task-pending {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
 .tasks-empty,
 .tasks-list {
   margin-top: var(--space-5);
@@ -1134,6 +1190,15 @@
 
   .task-item {
     grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .task-calendar-popover {
+    position: fixed;
+    z-index: 20;
+    top: var(--space-4);
+    right: var(--space-4);
+    left: var(--space-4);
+    max-width: none;
   }
 
   .task-due-date {

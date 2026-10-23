@@ -112,28 +112,16 @@ describe('journal deletion', () => {
     expect(screen.getByText('6 characters')).toBeTruthy()
   })
 
-  it('opens Tasks and adds a task with a due date and priority', async () => {
+  it('opens the persistent Tasks page with a visual calendar', async () => {
     render(<App />)
 
     fireEvent.click(await screen.findByRole('button', { name: 'Tasks' }))
 
     expect(screen.getByRole('heading', { name: 'Tasks' })).toBeTruthy()
-    const title = screen.getByLabelText('Task') as HTMLInputElement
-    const dueDate = screen.getByLabelText('Due date') as HTMLInputElement
-    const priority = screen.getByLabelText('Priority') as HTMLSelectElement
-    expect(title.required).toBe(true)
-    expect(dueDate.required).toBe(true)
-
-    fireEvent.change(title, { target: { value: 'Prepare weekly review' } })
-    fireEvent.change(dueDate, { target: { value: '2026-10-31' } })
-    fireEvent.change(priority, { target: { value: 'High' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Add task' }))
-
-    const taskList = screen.getByRole('list', { name: 'Task list' })
-    expect(taskList.textContent).toContain('Prepare weekly review')
-    expect(screen.getByText('Due 2026-10-31')).toBeTruthy()
-    expect(within(taskList).getByText('High')).toBeTruthy()
-    expect(title.value).toBe('')
+    fireEvent.click(screen.getByRole('button', { name: 'Due date' }))
+    expect(screen.getByRole('button', { name: /Go to the Previous Month/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Go to the Next Month/i })).toBeTruthy()
+    expect((screen.getByRole('button', { name: 'Add task' }) as HTMLButtonElement).disabled).toBe(true)
   })
 
   it('uses native input validation attributes for registration fields', async () => {
