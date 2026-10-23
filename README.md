@@ -4,7 +4,7 @@ Daily Journal is a React and TypeScript journal for daily reflection, priorities
 
 ## Feature status
 
-Implemented: email/password authentication, per-user Supabase entries, date navigation, morning ratings, three priorities, a daily notebook, evening review, autosave, and confirmed deletion of the selected entry. JSON/CSV export and JSON import are P1 future scope; they are not implemented.
+Implemented: email/password authentication, per-user Supabase entries, date navigation, morning ratings, three priorities, a daily notebook with an optional title, evening review, historical journal search, autosave, and confirmed deletion of the selected entry. JSON/CSV export and JSON import are P1 future scope; they are not implemented.
 
 ## Documentation
 

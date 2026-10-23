@@ -36,6 +36,7 @@ The composite primary key is `(user_id, entry_date)`. Row-level security is enab
 ```ts
 {
   date: 'YYYY-MM-DD',
+  title?: string, // optional searchable title
   morning?: { energy?: 1..10, mood?: 1..10, focus?: 1..10 },
   goals?: Array<{ text: string, completed: boolean }>,
   notes?: string,
@@ -51,3 +52,5 @@ The composite primary key is `(user_id, entry_date)`. Row-level security is enab
 The `date` inside `content` duplicates `entry_date`; the current migration does not enforce that they match. The UI writes at most three goals, but that limit is also enforced by the UI rather than the database.
 
 Source: [`supabase/migrations/20261012195000_create_journal_entries.sql`](../supabase/migrations/20261012195000_create_journal_entries.sql) and [`src/domain/DailyJournalEntry.ts`](../src/domain/DailyJournalEntry.ts).
+
+Historical search uses the existing JSON content, fetching 100-row pages ordered by database entry_date through a user_id-filtered RLS-protected query. Title, notebook, priorities and evening reflections are filtered case-insensitively in memory. The database entry_date, rather than the JSON copy, determines result navigation. No migration or new index is required for this small-journal approach.

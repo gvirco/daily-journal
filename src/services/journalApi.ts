@@ -98,6 +98,38 @@ export async function getJournalEntriesForDateRange(
   return data.map((row) => row.content as unknown as DailyJournalEntry)
 }
 
+// Read the complete RLS-protected history, not only a visible month or default result page.
+export async function getAllJournalEntries(signal?: AbortSignal): Promise<DailyJournalEntry[]> {
+  const user = await requireCurrentUser()
+  const pageSize = 100
+  const entries: DailyJournalEntry[] = []
+  let offset = 0
+
+  while (true) {
+    const { data, error } = await getSupabaseClient()
+      .from('journal_entries')
+      .select('entry_date, content')
+      .eq('user_id', user.id)
+      .order('entry_date', { ascending: false })
+      .range(offset, offset + pageSize - 1)
+      .abortSignal(signal ?? new AbortController().signal)
+
+    if (error !== null) throw toApiError(error)
+    const rows = data ?? []
+    entries.push(...rows.map((row) => ({
+      ...(row.content as unknown as DailyJournalEntry),
+      date: row.entry_date,
+    })))
+    if (rows.length < pageSize) break
+    offset += pageSize
+  }
+
+  // A session switch during pagination must never mix users' histories.
+  const currentUser = await requireCurrentUser()
+  if (currentUser.id !== user.id) throw new ApiError('Your session changed during the search.', 401)
+  return entries
+}
+
 export async function saveJournalEntry(entry: DailyJournalEntry, expectedUserId?: string): Promise<void> {
   const user = await requireCurrentUser()
   if (expectedUserId !== undefined && user.id !== expectedUserId) {
