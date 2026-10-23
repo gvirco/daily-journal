@@ -101,6 +101,41 @@ describe('journal deletion', () => {
     ))
   })
 
+  it('shows the Daily Notebook character count and updates it with the textarea value', async () => {
+    render(<App />)
+
+    fireEvent.click(await screen.findByRole('button', { name: /daily notebook/i }))
+    const notebook = screen.getByLabelText('Daily notebook notes') as HTMLTextAreaElement
+
+    expect(screen.getByText('0 characters')).toBeTruthy()
+    fireEvent.change(notebook, { target: { value: 'A note' } })
+    expect(screen.getByText('6 characters')).toBeTruthy()
+  })
+
+  it('opens Tasks and adds a task with a due date and priority', async () => {
+    render(<App />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Tasks' }))
+
+    expect(screen.getByRole('heading', { name: 'Tasks' })).toBeTruthy()
+    const title = screen.getByLabelText('Task') as HTMLInputElement
+    const dueDate = screen.getByLabelText('Due date') as HTMLInputElement
+    const priority = screen.getByLabelText('Priority') as HTMLSelectElement
+    expect(title.required).toBe(true)
+    expect(dueDate.required).toBe(true)
+
+    fireEvent.change(title, { target: { value: 'Prepare weekly review' } })
+    fireEvent.change(dueDate, { target: { value: '2026-10-31' } })
+    fireEvent.change(priority, { target: { value: 'High' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add task' }))
+
+    const taskList = screen.getByRole('list', { name: 'Task list' })
+    expect(taskList.textContent).toContain('Prepare weekly review')
+    expect(screen.getByText('Due 2026-10-31')).toBeTruthy()
+    expect(within(taskList).getByText('High')).toBeTruthy()
+    expect(title.value).toBe('')
+  })
+
   it('uses native input validation attributes for registration fields', async () => {
     const { AuthScreen } = await import('../src/components/AuthScreen')
     render(<AuthScreen initialError={null} onAuthenticated={vi.fn()} />)

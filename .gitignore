@@ -1,4 +1,5 @@
 # Logs
+.factory/
 logs
 *.log
 npm-debug.log*
