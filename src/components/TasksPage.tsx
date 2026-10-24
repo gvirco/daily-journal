@@ -52,7 +52,7 @@ function TaskDatePicker({ label, value, onChange, disabled = false }: {
         disabled={disabled}
         onClick={() => setIsOpen((open) => !open)}
       >
-        <span className="tasks-v2-field-icon" aria-hidden="true">▦</span>
+        <span className="tasks-v2-field-icon" aria-hidden="true"><CalendarIcon /></span>
         <span className="tasks-v2-field-name">Due date</span>
         <span className="tasks-v2-field-value">
           {selected ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(selected) : ''}
@@ -75,6 +75,19 @@ function TaskDatePicker({ label, value, onChange, disabled = false }: {
       )}
     </div>
   )
+}
+
+function CalendarIcon() {
+  return <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="3.5" y="5" width="17" height="15" rx="2" />
+    <path d="M7.5 3v4M16.5 3v4M3.5 9.5h17" />
+  </svg>
+}
+
+function TrashIcon() {
+  return <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v6M14 11v6" />
+  </svg>
 }
 
 function formatTaskDate(value: string) {
@@ -119,7 +132,7 @@ function TaskRows({ items, label, pendingTaskIds, actionMenuId, onToggle, onEdit
                 aria-label={`Edit ${task.title}`}
               >{task.title}</button>
               <span className={`tasks-v2-date${isDueNow ? ' is-due' : ''}`}>
-                <span className="tasks-v2-meta-icon" aria-hidden="true">▦</span>
+                <span className="tasks-v2-meta-icon" aria-hidden="true"><CalendarIcon /></span>
                 {formatTaskDate(task.dueDate)}
               </span>
               <span className={`tasks-v2-priority tasks-v2-priority-${task.priority.toLowerCase()}`}>{task.priority}</span>
@@ -315,7 +328,7 @@ function TasksPageContent({ userId, onBack }: Props) {
               <h2 id="delete-task-title">Delete task</h2>
               <button type="button" className="tasks-v2-close" aria-label="Close delete task" disabled={pendingTaskIds.has(deleting.id)} onClick={() => setDeleting(null)}>×</button>
             </div>
-            <div className="tasks-v2-delete-icon" aria-hidden="true">♜</div>
+            <div className="tasks-v2-delete-icon" aria-hidden="true"><TrashIcon /></div>
             <p className="tasks-v2-delete-question">Are you sure you want to delete this task?</p>
             <p className="tasks-v2-delete-note">This action cannot be undone.</p>
             <div className="tasks-v2-form-actions">
