@@ -144,6 +144,7 @@ describe('journal deletion', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Tasks' }))
 
     expect(screen.getByRole('heading', { name: 'Tasks' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Add a task' }))
     fireEvent.click(screen.getByRole('button', { name: 'Due date' }))
     expect(screen.getByRole('button', { name: /Go to the Previous Month/i })).toBeTruthy()
     expect(screen.getByRole('button', { name: /Go to the Next Month/i })).toBeTruthy()
