@@ -131,7 +131,7 @@ describe('TasksPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add a task' }))
     fireEvent.change(screen.getByLabelText('Task'), { target: { value: 'Confirmed' } })
     fireEvent.click(screen.getByRole('button', { name: 'Due date' })); fireEvent.click(screen.getByRole('button', { name: /October 31st, 2026/i })); fireEvent.click(screen.getByRole('button', { name: 'Add task' }))
-    expect((await screen.findByRole('status')).textContent).toContain('Task added.')
+    await waitFor(() => expect(screen.getByText('Task added.').getAttribute('role')).toBe('status'))
     expect(screen.queryByRole('alert')).toBeNull()
   })
   it('keeps progressive quick-add collapsed until explicitly opened', async () => {
