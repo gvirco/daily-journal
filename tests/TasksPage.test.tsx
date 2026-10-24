@@ -17,6 +17,7 @@ describe('TasksPage', () => {
 
   it('selects a calendar day and persists a high-priority task', async () => {
     render(<TasksPage userId="user-1" onBack={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add a task' }))
     fireEvent.change(screen.getByLabelText('Task'), { target: { value: 'Review plan' } })
     fireEvent.change(screen.getByLabelText('Priority'), { target: { value: 'High' } })
     fireEvent.click(screen.getByRole('button', { name: 'Due date' }))
@@ -33,13 +34,15 @@ describe('TasksPage', () => {
     expect(list.textContent?.indexOf('Earlier')).toBeLessThan(list.textContent?.indexOf('Later') ?? 0)
     fireEvent.click(screen.getByLabelText('Complete Earlier'))
     await waitFor(() => expect(api.updateTask).toHaveBeenCalled())
-    fireEvent.click(screen.getAllByRole('button', { name: 'Edit' })[0])
-    const editDialog = screen.getByRole('dialog')
+    fireEvent.click(screen.getByRole('button', { name: 'Task actions for Later' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }))
+    const editDialog = screen.getByRole('dialog', { name: 'Edit task' })
     fireEvent.change(within(editDialog).getByLabelText('Task'), { target: { value: 'Edited' } })
-    fireEvent.click(within(editDialog).getByRole('button', { name: 'Save task' }))
+    fireEvent.click(within(editDialog).getByRole('button', { name: 'Save changes' }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Edit task' })).toBeNull())
-    fireEvent.click(screen.getAllByRole('button', { name: 'Delete' })[0])
-    const deleteDialog = screen.getByRole('dialog', { name: 'Delete this task?' })
+    fireEvent.click(screen.getByRole('button', { name: 'Task actions for Edited' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }))
+    const deleteDialog = screen.getByRole('dialog', { name: 'Delete task' })
     fireEvent.click(within(deleteDialog).getByRole('button', { name: 'Delete task' }))
     await waitFor(() => expect(api.deleteTask).toHaveBeenCalled())
   })
@@ -48,6 +51,7 @@ describe('TasksPage', () => {
     let resolveCreate: (task: { id: string; title: string; dueDate: string; priority: 'High'; completed: boolean }) => void = () => undefined
     api.createTask.mockImplementationOnce(() => new Promise((resolve) => { resolveCreate = resolve }))
     render(<TasksPage userId="user-1" onBack={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add a task' }))
     fireEvent.change(screen.getByLabelText('Task'), { target: { value: 'Only once' } })
     fireEvent.click(screen.getByRole('button', { name: 'Due date' }))
     fireEvent.click(screen.getByRole('button', { name: /October 31st, 2026/i }))
@@ -65,6 +69,7 @@ describe('TasksPage', () => {
     api.createTask.mockResolvedValueOnce({ id: 'created', title: 'Created while loading', dueDate: '2026-10-31', priority: 'Medium', completed: false })
     render(<TasksPage userId="user-1" onBack={vi.fn()} />)
 
+    fireEvent.click(screen.getByRole('button', { name: 'Add a task' }))
     fireEvent.change(screen.getByLabelText('Task'), { target: { value: 'Created while loading' } })
     fireEvent.click(screen.getByRole('button', { name: 'Due date' }))
     fireEvent.click(screen.getByRole('button', { name: /October 31st, 2026/i }))
@@ -89,8 +94,9 @@ describe('TasksPage', () => {
     api.getTasks.mockResolvedValue([{ id: 'task-1', title: 'Keep delete', dueDate: '2026-10-31', priority: 'Medium', completed: false }])
     api.deleteTask.mockRejectedValueOnce(new Error('Delete unavailable'))
     render(<TasksPage userId="user-1" onBack={vi.fn()} />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Delete' }))
-    fireEvent.click(within(screen.getByRole('dialog', { name: 'Delete this task?' })).getByRole('button', { name: 'Delete task' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Task actions for Keep delete' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }))
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Delete task' })).getByRole('button', { name: 'Delete task' }))
     expect((await screen.findByRole('alert')).textContent).toContain('Delete unavailable')
     expect(screen.getByText('Keep delete')).toBeTruthy()
   })
@@ -102,7 +108,7 @@ describe('TasksPage', () => {
     render(<TasksPage userId="user-1" onBack={vi.fn()} />)
     fireEvent.click(await screen.findByLabelText('Complete Busy'))
     await waitFor(() => expect(api.updateTask).toHaveBeenCalledOnce())
-    expect((screen.getByRole('button', { name: 'Delete' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'Task actions for Busy' }) as HTMLButtonElement).disabled).toBe(true)
     expect(api.deleteTask).not.toHaveBeenCalled()
     resolveUpdate({ id: 'task-1', title: 'Busy', dueDate: '2026-10-31', priority: 'Medium', completed: true })
   })
@@ -111,6 +117,7 @@ describe('TasksPage', () => {
     let resolveCreate: (task: { id: string; title: string; dueDate: string; priority: 'Medium'; completed: boolean }) => void = () => undefined
     api.createTask.mockImplementationOnce(() => new Promise((resolve) => { resolveCreate = resolve }))
     const view = render(<TasksPage userId="user-a" onBack={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add a task' }))
     fireEvent.change(screen.getByLabelText('Task'), { target: { value: 'From A' } })
     fireEvent.click(screen.getByRole('button', { name: 'Due date' })); fireEvent.click(screen.getByRole('button', { name: /October 31st, 2026/i })); fireEvent.click(screen.getByRole('button', { name: 'Add task' }))
     view.rerender(<TasksPage userId="user-b" onBack={vi.fn()} />)
@@ -121,9 +128,44 @@ describe('TasksPage', () => {
 
   it('shows confirmation after a successful mutation', async () => {
     render(<TasksPage userId="user-1" onBack={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add a task' }))
     fireEvent.change(screen.getByLabelText('Task'), { target: { value: 'Confirmed' } })
     fireEvent.click(screen.getByRole('button', { name: 'Due date' })); fireEvent.click(screen.getByRole('button', { name: /October 31st, 2026/i })); fireEvent.click(screen.getByRole('button', { name: 'Add task' }))
     expect((await screen.findByRole('status')).textContent).toContain('Task added.')
     expect(screen.queryByRole('alert')).toBeNull()
   })
+  it('keeps progressive quick-add collapsed until explicitly opened', async () => {
+    render(<TasksPage userId="user-1" onBack={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Add a task' })).toBeTruthy()
+    expect(screen.queryByLabelText('Task')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Add a task' }))
+    expect(screen.getByRole('dialog', { name: 'Add a new task' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('dialog', { name: 'Add a new task' })).toBeNull()
+  })
+
+  it('collapses completed tasks by default and reopens them on demand', async () => {
+    api.getTasks.mockResolvedValueOnce([
+      { id: 'done', title: 'Finished task', dueDate: '2026-10-24', priority: 'Low', completed: true },
+    ])
+    render(<TasksPage userId="user-1" onBack={vi.fn()} />)
+    const toggle = await screen.findByRole('button', { name: /Completed tasks \(1\)/ })
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByText('Finished task')).toBeNull()
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getByText('Finished task')).toBeTruthy()
+  })
+
+  it('exposes edit and delete via a contextual task-action menu', async () => {
+    api.getTasks.mockResolvedValueOnce([
+      { id: 'item', title: 'Review prototype', dueDate: '2026-10-24', priority: 'Medium', completed: false },
+    ])
+    render(<TasksPage userId="user-1" onBack={vi.fn()} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Task actions for Review prototype' }))
+    expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }))
+    expect(screen.getByRole('dialog', { name: 'Edit task' })).toBeTruthy()
+  })
+
 })
