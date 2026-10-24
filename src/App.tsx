@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
   DailyGoal,
   DailyJournalEntry,
@@ -9,6 +9,7 @@ import type {
 import './App.css'
 import { AuthScreen } from './components/AuthScreen'
 import { JournalSearch } from './components/JournalSearch'
+import { TasksPage } from './components/TasksPage'
 import {
   ApiError,
   deleteJournalEntry,
@@ -202,15 +203,6 @@ function WeatherIndicator({ date, weatherState }: { date: string; weatherState: 
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'failed'
 
-type TaskPriority = 'Low' | 'Medium' | 'High'
-
-type Task = {
-  id: number
-  title: string
-  dueDate: string
-  priority: TaskPriority
-}
-
 function App() {
   const [selectedDate, setSelectedDate] = useState(getCurrentLocalDate)
   const [user, setUser] = useState<AuthenticatedUser | null>(null)
@@ -227,10 +219,6 @@ function App() {
   const [isOverviewOpen, setIsOverviewOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isTasksOpen, setIsTasksOpen] = useState(false)
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [taskTitle, setTaskTitle] = useState('')
-  const [taskDueDate, setTaskDueDate] = useState('')
-  const [taskPriority, setTaskPriority] = useState<TaskPriority>('Medium')
   const [overviewMonth, setOverviewMonth] = useState(getMonthStart(selectedDate))
   const [overviewEntries, setOverviewEntries] = useState<DailyJournalEntry[]>([])
   const [overviewStatus, setOverviewStatus] = useState<'idle' | 'loading' | 'error'>('idle')
@@ -254,7 +242,6 @@ function App() {
   const overviewTriggerRef = useRef<HTMLButtonElement>(null)
   const searchTriggerRef = useRef<HTMLButtonElement>(null)
   const overviewCloseRef = useRef<HTMLButtonElement>(null)
-  const nextTaskId = useRef(1)
   const today = getCurrentLocalDate()
   const selectedDateValue = toDateInputValue(selectedDate)
   const formattedDate = new Intl.DateTimeFormat('en-GB', {
@@ -286,10 +273,6 @@ function App() {
       setIsOverviewOpen(false)
       setIsSearchOpen(false)
       setIsTasksOpen(false)
-      setTasks([])
-      setTaskTitle('')
-      setTaskDueDate('')
-      setTaskPriority('Medium')
       setIsDeleteConfirmationOpen(false)
       isDeletingRef.current = false
       setIsDeleting(false)
@@ -408,6 +391,7 @@ function App() {
   async function selectDate(date: Date) {
     if (isDeletingRef.current) return
     await flushPendingSave(selectedDateValue)
+    setIsTasksOpen(false)
     journalEntryRef.current = null
     setSelectedDate(date)
     setJournalEntry(null)
@@ -549,23 +533,6 @@ function App() {
   function openTasks() {
     setIsOverviewOpen(false)
     setIsTasksOpen(true)
-  }
-
-  function addTask(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-
-    const title = taskTitle.trim()
-    if (title === '' || taskDueDate === '') return
-
-    setTasks((currentTasks) => [...currentTasks, {
-      id: nextTaskId.current++,
-      title,
-      dueDate: taskDueDate,
-      priority: taskPriority,
-    }])
-    setTaskTitle('')
-    setTaskDueDate('')
-    setTaskPriority('Medium')
   }
 
   function changeOverviewMonth(months: number) {
@@ -847,49 +814,7 @@ function App() {
       </header>
 
       {isTasksOpen ? (
-        <section className="tasks-page" aria-labelledby="tasks-title">
-          <div className="tasks-page-header">
-            <div>
-              <p className="tasks-page-eyebrow">Plan your work</p>
-              <h2 id="tasks-title">Tasks</h2>
-            </div>
-            <button className="date-navigation-button" type="button" onClick={() => setIsTasksOpen(false)}>
-              Back to journal
-            </button>
-          </div>
-          <form className="task-form" onSubmit={addTask}>
-            <label className="task-field">
-              <span>Task</span>
-              <input value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} required />
-            </label>
-            <label className="task-field">
-              <span>Due date</span>
-              <input type="date" value={taskDueDate} onChange={(event) => setTaskDueDate(event.target.value)} required />
-            </label>
-            <label className="task-field">
-              <span>Priority</span>
-              <select value={taskPriority} onChange={(event) => setTaskPriority(event.target.value as TaskPriority)}>
-                <option value="Low">Low</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
-              </select>
-            </label>
-            <button className="task-submit" type="submit">Add task</button>
-          </form>
-          {tasks.length === 0 ? (
-            <p className="tasks-empty">No tasks yet. Add one to get started.</p>
-          ) : (
-            <ul className="tasks-list" aria-label="Task list">
-              {tasks.map((task) => (
-                <li className="task-item" key={task.id}>
-                  <span className="task-title">{task.title}</span>
-                  <span className="task-due-date">Due {task.dueDate}</span>
-                  <span className={`task-priority task-priority-${task.priority.toLowerCase()}`}>{task.priority}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        <TasksPage key={user.id} userId={user.id} onBack={() => setIsTasksOpen(false)} />
       ) : isEntryLoading ? (
         <p className="journal-loading" aria-live="polite">Loading journal entry…</p>
       ) : entryError?.date === selectedDateValue && entryError.phase === 'load' ? (

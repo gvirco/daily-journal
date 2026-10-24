@@ -5,6 +5,7 @@ const api = vi.hoisted(() => ({
   deleteJournalEntry: vi.fn(),
   getAllJournalEntries: vi.fn(),
   getCurrentUser: vi.fn(),
+  getJournalEntriesForDateRange: vi.fn(),
   getJournalEntry: vi.fn(),
   logout: vi.fn(),
   onAuthStateChange: vi.fn(),
@@ -23,6 +24,7 @@ vi.mock('../src/services/journalApi', () => ({
   deleteJournalEntry: api.deleteJournalEntry,
   getAllJournalEntries: api.getAllJournalEntries,
   getCurrentUser: api.getCurrentUser,
+  getJournalEntriesForDateRange: api.getJournalEntriesForDateRange,
   getJournalEntry: api.getJournalEntry,
   logout: api.logout,
   onAuthStateChange: api.onAuthStateChange,
@@ -38,6 +40,7 @@ describe('journal deletion', () => {
   beforeEach(() => {
     api.getCurrentUser.mockResolvedValue(user)
     api.getAllJournalEntries.mockResolvedValue([])
+    api.getJournalEntriesForDateRange.mockResolvedValue([])
     api.getJournalEntry.mockResolvedValue(entry)
     api.saveJournalEntry.mockResolvedValue(undefined)
     api.deleteJournalEntry.mockResolvedValue(undefined)
@@ -89,6 +92,29 @@ describe('journal deletion', () => {
     await waitFor(() => expect(api.getJournalEntry).toHaveBeenCalledWith('2026-01-01', expect.any(AbortSignal)))
   })
 
+  it('returns to the selected journal date when navigation, Search, or Overview is used from Tasks', async () => {
+    api.getAllJournalEntries.mockResolvedValueOnce([{ date: '2026-01-01', title: 'Winter reflection', notes: 'Snow day' }])
+    render(<App />)
+    await screen.findByLabelText('Priority 1')
+    fireEvent.click(screen.getByRole('button', { name: 'Tasks' }))
+    expect(screen.getByRole('heading', { name: 'Tasks' })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Tasks' })).toBeNull())
+    expect(await screen.findByLabelText('Priority 1')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tasks' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }))
+    fireEvent.change(await screen.findByLabelText('Search title and content'), { target: { value: 'Winter' } })
+    fireEvent.click(await screen.findByRole('button', { name: /Winter reflection/ }))
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Tasks' })).toBeNull())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tasks' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Overview' }))
+    fireEvent.click(await screen.findByRole('button', { name: /13 January 2026/i }))
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Tasks' })).toBeNull())
+  })
+
   it('saves an optional title via the existing journal autosave', async () => {
     render(<App />)
     await screen.findByLabelText('Priority 1')
@@ -112,28 +138,17 @@ describe('journal deletion', () => {
     expect(screen.getByText('6 characters')).toBeTruthy()
   })
 
-  it('opens Tasks and adds a task with a due date and priority', async () => {
+  it('opens the persistent Tasks page with a visual calendar', async () => {
     render(<App />)
 
     fireEvent.click(await screen.findByRole('button', { name: 'Tasks' }))
 
     expect(screen.getByRole('heading', { name: 'Tasks' })).toBeTruthy()
-    const title = screen.getByLabelText('Task') as HTMLInputElement
-    const dueDate = screen.getByLabelText('Due date') as HTMLInputElement
-    const priority = screen.getByLabelText('Priority') as HTMLSelectElement
-    expect(title.required).toBe(true)
-    expect(dueDate.required).toBe(true)
-
-    fireEvent.change(title, { target: { value: 'Prepare weekly review' } })
-    fireEvent.change(dueDate, { target: { value: '2026-10-31' } })
-    fireEvent.change(priority, { target: { value: 'High' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Add task' }))
-
-    const taskList = screen.getByRole('list', { name: 'Task list' })
-    expect(taskList.textContent).toContain('Prepare weekly review')
-    expect(screen.getByText('Due 2026-10-31')).toBeTruthy()
-    expect(within(taskList).getByText('High')).toBeTruthy()
-    expect(title.value).toBe('')
+    fireEvent.click(screen.getByRole('button', { name: 'Add a task' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Due date' }))
+    expect(screen.getByRole('button', { name: /Go to the Previous Month/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Go to the Next Month/i })).toBeTruthy()
+    expect((screen.getByRole('button', { name: 'Add task' }) as HTMLButtonElement).disabled).toBe(true)
   })
 
   it('uses native input validation attributes for registration fields', async () => {
