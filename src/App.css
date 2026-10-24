@@ -1513,7 +1513,8 @@
   color: var(--color-danger);
 }
 .tasks-v2-meta-icon {
-  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
   line-height: 1;
 }
 .tasks-v2-priority {
@@ -1785,7 +1786,7 @@
 .tasks-v2-primary {
   border-color: var(--color-accent);
   background: var(--color-accent);
-  color: var(--color-bg);
+  color: var(--color-text);
 }
 .tasks-v2-primary:hover:not(:disabled) {
   background: var(--color-accent-hover);
