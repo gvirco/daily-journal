@@ -84,6 +84,70 @@ function formatTaskDate(value: string) {
   return value < today ? `Overdue · ${formatted}` : formatted
 }
 
+function TaskRows({ items, label, pendingTaskIds, actionMenuId, onToggle, onEdit, onDelete, onMenuToggle }: {
+  items: Task[]
+  label: string
+  pendingTaskIds: Set<string>
+  actionMenuId: string | null
+  onToggle: (task: Task) => void
+  onEdit: (task: Task) => void
+  onDelete: (task: Task) => void
+  onMenuToggle: (id: string) => void
+}) {
+  return (
+    items.length === 0
+      ? <p className="tasks-empty tasks-v2-empty">{label === 'Open tasks' ? 'No open tasks. Add one to get started.' : 'No completed tasks yet.'}</p>
+      : <ul className="tasks-v2-list" aria-label={label}>
+        {items.map((task) => {
+          const isPending = pendingTaskIds.has(task.id)
+          const isDueNow = !task.completed && task.dueDate <= valueFromDate(new Date())
+          return (
+            <li className={`tasks-v2-item${task.completed ? ' is-completed' : ''}`} key={task.id} aria-busy={isPending}>
+              <input
+                className="tasks-v2-checkbox"
+                type="checkbox"
+                checked={task.completed}
+                disabled={isPending}
+                onChange={() => onToggle(task)}
+                aria-label={`${task.completed ? 'Reopen' : 'Complete'} ${task.title}`}
+              />
+              <button
+                type="button"
+                className="tasks-v2-title"
+                disabled={isPending}
+                onClick={() => onEdit(task)}
+                aria-label={`Edit ${task.title}`}
+              >{task.title}</button>
+              <span className={`tasks-v2-date${isDueNow ? ' is-due' : ''}`}>
+                <span className="tasks-v2-meta-icon" aria-hidden="true">▦</span>
+                {formatTaskDate(task.dueDate)}
+              </span>
+              <span className={`tasks-v2-priority tasks-v2-priority-${task.priority.toLowerCase()}`}>{task.priority}</span>
+              <div className="tasks-v2-actions">
+                <button
+                  type="button"
+                  className="tasks-v2-more"
+                  aria-label={`Task actions for ${task.title}`}
+                  aria-haspopup="menu"
+                  aria-expanded={actionMenuId === task.id}
+                  disabled={isPending}
+                  onClick={() => onMenuToggle(task.id)}
+                >···</button>
+                {actionMenuId === task.id && (
+                  <div className="tasks-v2-menu" role="menu" aria-label={`Actions for ${task.title}`}>
+                    <button type="button" role="menuitem" onClick={() => onEdit(task)}>Edit</button>
+                    <button type="button" role="menuitem" className="is-danger" onClick={() => onDelete(task)}>Delete</button>
+                  </div>
+                )}
+              </div>
+              {isPending && <span className="tasks-v2-pending" role="status">Saving…</span>}
+            </li>
+          )
+        })}
+      </ul>
+  )
+}
+
 function TasksPageContent({ userId, onBack }: Props) {
   const [tasks, setTasks] = useState<Task[]>([]); const [title, setTitle] = useState(''); const [dueDate, setDueDate] = useState(''); const [priority, setPriority] = useState<TaskPriority>('Medium')
   const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null); const [success, setSuccess] = useState<string | null>(null); const [editing, setEditing] = useState<Task | null>(null); const [deleting, setDeleting] = useState<Task | null>(null); const [pendingTaskIds, setPendingTaskIds] = useState<Set<string>>(new Set()); const [isCreating, setIsCreating] = useState(false); const userRef = useRef(userId); const createLock = useRef(false); const pendingTaskIdsRef = useRef(new Set<string>()); const taskLoadGeneration = useRef(0)
@@ -128,59 +192,6 @@ function TasksPageContent({ userId, onBack }: Props) {
   async function save(task: Task) { if (pendingTaskIdsRef.current.has(task.id) || task.title.trim() === '') return; const requestUserId = userId; pendingTaskIdsRef.current.add(task.id); setPendingTaskIds(new Set(pendingTaskIdsRef.current)); setError(null); setSuccess(null); try { const updated = await updateTask(task.id, task, requestUserId); if (userRef.current !== requestUserId) return; setTasks((current) => current.map((item) => item.id === updated.id ? updated : item)); setEditing(null); setSuccess('Task saved.') } catch (e) { if (userRef.current === requestUserId) setError(e instanceof Error ? e.message : 'Unable to save task.') } finally { pendingTaskIdsRef.current.delete(task.id); if (userRef.current === requestUserId) setPendingTaskIds(new Set(pendingTaskIdsRef.current)) } }
   async function toggle(task: Task) { await save({ ...task, completed: !task.completed }) }
   async function remove() { if (!deleting || pendingTaskIdsRef.current.has(deleting.id)) return; const task = deleting; const requestUserId = userId; pendingTaskIdsRef.current.add(task.id); setPendingTaskIds(new Set(pendingTaskIdsRef.current)); setError(null); setSuccess(null); try { await deleteTask(task.id, requestUserId); if (userRef.current !== requestUserId) return; setTasks((current) => current.filter((item) => item.id !== task.id)); setDeleting(null); setSuccess('Task deleted.') } catch (e) { if (userRef.current === requestUserId) setError(e instanceof Error ? e.message : 'Unable to delete task.') } finally { pendingTaskIdsRef.current.delete(task.id); if (userRef.current === requestUserId) setPendingTaskIds(new Set(pendingTaskIdsRef.current)) } }
-
-  const renderRows = (items: Task[], label: string) => (
-    items.length === 0
-      ? <p className="tasks-empty tasks-v2-empty">{label === 'Open tasks' ? 'No open tasks. Add one to get started.' : 'No completed tasks yet.'}</p>
-      : <ul className="tasks-v2-list" aria-label={label}>
-        {items.map((task) => {
-          const isPending = pendingTaskIds.has(task.id)
-          const isDueNow = !task.completed && task.dueDate <= valueFromDate(new Date())
-          return (
-            <li className={`tasks-v2-item${task.completed ? ' is-completed' : ''}`} key={task.id} aria-busy={isPending}>
-              <input
-                className="tasks-v2-checkbox"
-                type="checkbox"
-                checked={task.completed}
-                disabled={isPending}
-                onChange={() => void toggle(task)}
-                aria-label={`${task.completed ? 'Reopen' : 'Complete'} ${task.title}`}
-              />
-              <button
-                type="button"
-                className="tasks-v2-title"
-                disabled={isPending}
-                onClick={() => setEditing(task)}
-                aria-label={`Edit ${task.title}`}
-              >{task.title}</button>
-              <span className={`tasks-v2-date${isDueNow ? ' is-due' : ''}`}>
-                <span className="tasks-v2-meta-icon" aria-hidden="true">▦</span>
-                {formatTaskDate(task.dueDate)}
-              </span>
-              <span className={`tasks-v2-priority tasks-v2-priority-${task.priority.toLowerCase()}`}>{task.priority}</span>
-              <div className="tasks-v2-actions">
-                <button
-                  type="button"
-                  className="tasks-v2-more"
-                  aria-label={`Task actions for ${task.title}`}
-                  aria-haspopup="menu"
-                  aria-expanded={actionMenuId === task.id}
-                  disabled={isPending}
-                  onClick={() => setActionMenuId((current) => current === task.id ? null : task.id)}
-                >···</button>
-                {actionMenuId === task.id && (
-                  <div className="tasks-v2-menu" role="menu" aria-label={`Actions for ${task.title}`}>
-                    <button type="button" role="menuitem" onClick={() => { setActionMenuId(null); setEditing(task) }}>Edit</button>
-                    <button type="button" role="menuitem" className="is-danger" onClick={() => { setActionMenuId(null); setDeleting(task) }}>Delete</button>
-                  </div>
-                )}
-              </div>
-              {isPending && <span className="tasks-v2-pending" role="status">Saving…</span>}
-            </li>
-          )
-        })}
-      </ul>
-  )
 
   const priorityField = (value: TaskPriority, onChange: (value: TaskPriority) => void, disabled = false) => (
     <label className="tasks-v2-field-row tasks-v2-priority-row">
@@ -251,7 +262,7 @@ function TasksPageContent({ userId, onBack }: Props) {
 
       <section className="tasks-v2-section">
         <h3>Open tasks ({open.length})</h3>
-        {loading ? <p className="tasks-v2-loading" role="status">Loading tasks…</p> : renderRows(open, 'Open tasks')}
+        {loading ? <p className="tasks-v2-loading" role="status">Loading tasks…</p> : <TaskRows items={open} label="Open tasks" pendingTaskIds={pendingTaskIds} actionMenuId={actionMenuId} onToggle={(task) => void toggle(task)} onEdit={(task) => { setActionMenuId(null); setEditing(task) }} onDelete={(task) => { setActionMenuId(null); setDeleting(task) }} onMenuToggle={(id) => setActionMenuId((current) => current === id ? null : id)} />}
       </section>
 
       <section className="tasks-v2-section tasks-v2-completed-section">
@@ -264,7 +275,7 @@ function TasksPageContent({ userId, onBack }: Props) {
           <span>Completed tasks ({completed.length})</span>
           <span className="tasks-v2-chevron" aria-hidden="true">{isCompletedExpanded ? '⌃' : '⌄'}</span>
         </button>
-        {isCompletedExpanded && renderRows(completed, 'Completed tasks')}
+        {isCompletedExpanded && <TaskRows items={completed} label="Completed tasks" pendingTaskIds={pendingTaskIds} actionMenuId={actionMenuId} onToggle={(task) => void toggle(task)} onEdit={(task) => { setActionMenuId(null); setEditing(task) }} onDelete={(task) => { setActionMenuId(null); setDeleting(task) }} onMenuToggle={(id) => setActionMenuId((current) => current === id ? null : id)} />}
       </section>
 
       {editing && (
